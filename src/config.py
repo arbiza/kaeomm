@@ -8,6 +8,7 @@ transactions_header = ['time',
                        'cur',
                        'id',
                        'ref',
+                       'notes',
                        'category',
                        'tags'
                        ]

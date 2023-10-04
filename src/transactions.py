@@ -34,16 +34,39 @@ class Transactions:
     '''
 
     def __init__(self) -> None:
-        self._transactions = None
+        '''
+        Loads the transactions database into a Pandas DataFrame, it the database
+        exists. If not, it creates an empty DF with the set of columns defined in
+        config.py.
+        '''
+        self._df = None
 
         try:
-            self._transactions = pd.read_csv(transactions_db)
+            self._df = pd.read_csv(transactions_db, sep='|')
 
-            if self._transactions.columns.values.tolist() != transactions_header:
-                raise CorruptedTransctionsDB("Transactions DB is corrupted")
+            if self._df.columns.values.tolist() != transactions_header:
+                raise CorruptedTransctionsDB(
+                    "Exception: Transactions DB is corrupted. \n"
+                    "\n"
+                    "  Expected headers:\n"
+                    "  {}\n"
+                    "\n"
+                    "  Existing headers:\n"
+                    "  {}\n"
+                    "\n".format(transactions_header,
+                                self._df.columns.values.tolist()))
 
         except FileNotFoundError:
-            self._transactions = pd.DataFrame(columns=transactions_header)
+            self._df = pd.DataFrame(columns=transactions_header)
 
         except CorruptedTransctionsDB as e:
             print(str(e))
+
+    def add(self, transaction: list) -> None:
+        pass
+
+    def add_bulk(self, df: pd.DataFrame) -> None:
+        pass
+
+    def save(self) -> None:
+        self._df.to_csv(transactions_db, sep='|', index=False)
