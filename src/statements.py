@@ -1,39 +1,43 @@
 import pandas as pd
 
+from transactions import Transactions
+
+
+class StatementException(Exception):
+    pass
+
 
 class StatementsParser:
 
     def __init__(self, statement_path: str) -> None:
-        self._stmt_df = None
-        self._stmt_path = statement_path
+        self._df = pd.DataFrame(columns=Transactions.headers())
+        self._stmt = pd.read_csv(statement_path)
 
-    def read_csv(self) -> None:
-        self._stmt_df = pd.read_csv(self._stmt_path)
+    @property
+    def df(self):
+        return self._df
 
+    @df.setter
+    def df(self, value):
+        raise StatementException(
+            'Transactions DF can\'t be directly modified.')
 
-class Revolut(StatementsParser):
-    '''
-    Parses Revolut statements
-    '''
+    def get_stmt_columns(self) -> list:
+        return self._stmt.columns.values.tolist()
 
-    def __init__(self, df: pd.DataFrame, statement_path: str) -> None:
-        super().__init__(statement_path)
-        super().read_csv()
-        self._df = df
+    def get_df_columns(self) -> list:
+        return Transactions.headers()
 
-    def parse(self) -> pd.DataFrame:
-        '''
-        The CSV statement contains the following columns:
+    def import_column(self, src_stmt_col, dst_df_col) -> None:
 
-          - Type
-          - Product
-          - Started Date (Transaction time in UTC)
-          - Completed Date
-          - Description
-          - Amount
-          - Fee
-          - Currency
-          - State
-          - Balance
-        '''
-        return self._stmt_df
+        if src_stmt_col not in self.get_stmt_columns():
+            raise StatementException(
+                'The statement has no column named "{}"'.format(src_stmt_col))
+        elif dst_df_col not in self.get_df_columns():
+            raise StatementException(
+                'The transactions table (DF) has no column named "{}"'.format(dst_df_col))
+
+        self._df[dst_df_col] = self._stmt[src_stmt_col]
+
+    def fill_up_column(self, dst_df_col: str, value: str) -> None:
+        self._df[dst_df_col] = value

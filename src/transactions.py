@@ -1,7 +1,6 @@
 import pandas as pd
 
-from config import transactions_db
-from config import transactions_header
+from config import Config
 
 
 class CorruptedTransctionsDB(Exception):
@@ -14,37 +13,25 @@ class Transactions:
 
     When instantiated, it loads the transactions history database into a Pandas
     DataFrame. The dataframe is ordered by date/time.
-
-    Headers of Transaction DataFrame:
-
-    - time: date and time in UTC
-    - type:
-        - in
-        - out
-        - fee
-    - src: Source of the transaction (bank account, card, manually added, etc.)
-    - desc: Description
-    - sum: Amount of the transaction
-    - cur: Currency abbreviation
-    - id: Unique identifier for the transaction
-    - ref: When a transaction relates to another transaction, this cell will have
-           the other transaction's ID
-    - category: Category name
-    - tags: List of tags
     '''
 
-    def __init__(self) -> None:
+    def __init__(self, cfg: Config) -> None:
         '''
-        Loads the transactions database into a Pandas DataFrame, it the database
+        Loads the transactions database into a Pandas DataFrame, if the database
         exists. If not, it creates an empty DF with the set of columns defined in
-        config.py.
+        this class "header()" static method.
         '''
         self._df = None
 
-        try:
-            self._df = pd.read_csv(transactions_db, sep='|')
+        # 'Config' is a Singleton class. self._cfg attributes' values will update
+        # if the Config object is modified anywhere else. This is specially
+        # important to keep the path to the files always actual.
+        self._cfg = cfg
 
-            if self._df.columns.values.tolist() != transactions_header:
+        try:
+            self._df = pd.read_csv(self._cfg.transactions_db_path, sep='|')
+
+            if self._df.columns.values.tolist() != self.headers():
                 raise CorruptedTransctionsDB(
                     "Exception: Transactions DB is corrupted. \n"
                     "\n"
@@ -53,11 +40,11 @@ class Transactions:
                     "\n"
                     "  Existing headers:\n"
                     "  {}\n"
-                    "\n".format(transactions_header,
+                    "\n".format(self.headers(),
                                 self._df.columns.values.tolist()))
 
         except FileNotFoundError:
-            self._df = pd.DataFrame(columns=transactions_header)
+            self._df = pd.DataFrame(columns=self.headers())
 
         except CorruptedTransctionsDB as e:
             print(str(e))
@@ -68,5 +55,23 @@ class Transactions:
     def add_bulk(self, df: pd.DataFrame) -> None:
         pass
 
+    @staticmethod
+    def headers() -> list:
+        '''Returns the Transactions DataFrame headers'''
+        return ['time',
+                'type',
+                'source',
+                'desc',
+                'amount',
+                'fee',
+                'total',
+                'cur',
+                'id',
+                'ref',
+                'notes',
+                'category',
+                'tags'
+                ]
+
     def save(self) -> None:
-        self._df.to_csv(transactions_db, sep='|', index=False)
+        self._df.to_csv(self._cfg.transactions_db_path, sep='|', index=False)
