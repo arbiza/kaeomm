@@ -16,10 +16,14 @@ if __name__ == "__main__":
     acc.statement_column_mapping('Description', 'desc')
     acc.statement_column_mapping('Amount', 'amount')
     acc.statement_column_mapping('Fee', 'fee')
+    acc.statement_column_mapping('Currency', 'curr')
 
-    print(acc.to_json())
+    # print(acc.to_json())
 
-    # [print(type(i)) for i in acc._stmt_columns_mapping]
-    # [print(key, value) for key, value in acc._stmt_columns_mapping.items()]
-    for l in acc._stmt_columns_mapping:
-        print(l.items())
+    [print(l['src'], l['dst']) for l in acc._stmt_columns_mapping]
+
+    df = acc.statement_parse('../data/statements/revolut-2023.csv')
+
+    print(df)
+
+    print('time type: {}'.format(type(df['time'][0])))

@@ -41,3 +41,8 @@ class StatementsParser:
 
     def fill_up_column(self, dst_df_col: str, value: str) -> None:
         self._df[dst_df_col] = value
+
+    def fill_up_total_column(self) -> None:
+        # Convert all the fee entries to negative, if they are positive
+        self._df.loc[self._df['fee'] > 0, 'fee'] = self._df['fee'] * -1
+        self._df['total'] = self._df['amount'] + self._df['fee']

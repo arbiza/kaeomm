@@ -65,7 +65,7 @@ class Transactions:
                 'amount',
                 'fee',
                 'total',
-                'cur',
+                'curr',
                 'id',
                 'ref',
                 'notes',

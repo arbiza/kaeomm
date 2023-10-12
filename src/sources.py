@@ -1,7 +1,10 @@
 import json
+import pandas
+from datetime import datetime
 
 from config import Config
 from statements import StatementsParser
+from transactions import Transactions
 
 
 class SourcesException(Exception):
@@ -36,7 +39,6 @@ class Sources:
 
         # Loads the existing sources into the sources list
         try:
-            self._df = pd.read_csv(self._cfg.sources_db_path, sep='|')
             with open(self._cfg.sources_db_path, 'r') as f:
                 self._sources_db = json.load(f)
 
@@ -70,19 +72,53 @@ class Sources:
 class Source:
 
     def __init__(self, name: str, currency: str) -> None:
-        self._name = "{}-{}".format(name, currency)
+        self._name = name
         self._currency = currency
+        self._id = "{}-{}".format(name, currency)
         self._type = None
         self._stmt_columns_mapping = []
+        self._stmt_time_format = str()
 
     def statement_column_mapping(self, src_col: str, dst_col: str) -> None:
-        self._stmt_columns_mapping.append({
-            "src": src_col,
-            "dst": dst_col
-        })
+        if dst_col not in Transactions.headers():
+            raise SourcesException(
+                "The Transactions DataFrame has no column named '{}'\n".format(
+                    dst_col
+                )
+            )
+        elif dst_col in ['curr', 'source', 'total', 'id', 'ref']:
+            # Some fields will be automatically set during the statement parsing;
+            # the user is not able to set them.
+            pass
+        else:
+            self._stmt_columns_mapping.append({
+                "src": src_col,
+                "dst": dst_col
+            })
 
-    def statement_parse(self, stmt_path: str) -> bool:
+    def statement_parse(self, stmt_path: str) -> pandas.DataFrame:
         parser = StatementsParser(stmt_path)
+
+        # It proceeds only if at least one column mapping has been set
+        if len(self._stmt_columns_mapping) == 0:
+            raise SourcesException(
+                "None 'column mapping'has been set. The statement can't be parsed\n"
+                "Set the columns mapping and try again\n"
+            )
+        else:
+            for l in self._stmt_columns_mapping:
+                if l['src'] not in parser.get_stmt_columns():
+                    raise SourcesException(
+                        "The statement provided has no column named '{}'".format(
+                            l['src']
+                        )
+                    )
+                else:
+                    parser.import_column(l['src'], l['dst'])
+        parser.fill_up_column('curr', self._currency)
+        parser.fill_up_column('source', self._id)
+        parser.fill_up_total_column()
+        return parser.df
 
     def to_json(self) -> json:
         return json.dumps({
