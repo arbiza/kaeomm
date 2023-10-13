@@ -1,6 +1,5 @@
 import json
 import pandas
-from datetime import datetime
 
 from config import Config
 from statements import StatementsParser
@@ -79,7 +78,7 @@ class Source:
         self._stmt_columns_mapping = []
         self._stmt_time_format = str()
 
-    def statement_column_mapping(self, src_col: str, dst_col: str) -> None:
+    def statement_column_mapping(self, src_col: list, dst_col: str) -> None:
         if dst_col not in Transactions.headers():
             raise SourcesException(
                 "The Transactions DataFrame has no column named '{}'\n".format(
@@ -90,7 +89,7 @@ class Source:
             # Some fields will be automatically set during the statement parsing;
             # the user is not able to set them.
             pass
-        else:
+        elif len(src_col) > 0:
             self._stmt_columns_mapping.append({
                 "src": src_col,
                 "dst": dst_col
@@ -99,25 +98,27 @@ class Source:
     def statement_parse(self, stmt_path: str) -> pandas.DataFrame:
         parser = StatementsParser(stmt_path)
 
-        # It proceeds only if at least one column mapping has been set
+        # Proceeds only if at least one column mapping has been set
         if len(self._stmt_columns_mapping) == 0:
             raise SourcesException(
                 "None 'column mapping'has been set. The statement can't be parsed\n"
                 "Set the columns mapping and try again\n"
             )
-        else:
-            for l in self._stmt_columns_mapping:
-                if l['src'] not in parser.get_stmt_columns():
+
+        # Proceeds only if the columns names exist on the statement (for the
+        # transactions DF, it's already been checked)
+        for l_src in [l['src'] for l in self._stmt_columns_mapping]:
+            for col_name in l_src:
+                if col_name not in parser.get_stmt_columns():
                     raise SourcesException(
-                        "The statement provided has no column named '{}'".format(
-                            l['src']
-                        )
-                    )
-                else:
-                    parser.import_column(l['src'], l['dst'])
+                        "The statement provided has no column named '{}'".format(col_name))
+
+        [parser.import_column(l['src'], l['dst'])
+         for l in self._stmt_columns_mapping]
+
         parser.fill_up_column('curr', self._currency)
         parser.fill_up_column('source', self._id)
-        parser.fill_up_total_column()
+        parser.conclude()
         return parser.df
 
     def to_json(self) -> json:

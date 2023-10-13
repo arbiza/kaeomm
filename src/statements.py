@@ -1,4 +1,7 @@
 import pandas as pd
+from pandas.api.types import is_string_dtype
+from pandas.api.types import is_numeric_dtype
+from datetime import datetime
 
 from transactions import Transactions
 
@@ -28,21 +31,40 @@ class StatementsParser:
     def get_df_columns(self) -> list:
         return Transactions.headers()
 
-    def import_column(self, src_stmt_col, dst_df_col) -> None:
+    def get_time_format(dt: str) -> str:
+        '''Returns the date/time format to parse str into datatime objects'''
+        pass
 
-        if src_stmt_col not in self.get_stmt_columns():
-            raise StatementException(
-                'The statement has no column named "{}"'.format(src_stmt_col))
-        elif dst_df_col not in self.get_df_columns():
-            raise StatementException(
-                'The transactions table (DF) has no column named "{}"'.format(dst_df_col))
+    def import_column(self, src_stmt_col: list, dst_df_col: str) -> None:
 
-        self._df[dst_df_col] = self._stmt[src_stmt_col]
+        if len(src_stmt_col) == 1:
+            self._df[dst_df_col] = self._stmt[src_stmt_col]
+
+        elif len(src_stmt_col) > 1:
+            # To avoid problems, the program has to identify whether the values
+            # are strings or numbers. The empty cells have to be filled-up.
+            if is_numeric_dtype(self._stmt[src_stmt_col[0]].dtype):
+                [self._stmt[c].fillna(0, inplace=True) for c in src_stmt_col]
+                self._df[dst_df_col] = self._stmt[src_stmt_col].sum(axis=1)
+
+            elif is_string_dtype(self._stmt[src_stmt_col[0]].dtype):
+                [self._stmt[c].fillna('No ' + c, inplace=True)
+                 for c in src_stmt_col]
+                self._df[dst_df_col] = self._stmt[src_stmt_col].agg(
+                    ' - '.join, axis=1)
 
     def fill_up_column(self, dst_df_col: str, value: str) -> None:
         self._df[dst_df_col] = value
 
-    def fill_up_total_column(self) -> None:
-        # Convert all the fee entries to negative, if they are positive
+    def conclude(self) -> None:
+        # Convert all the fee entries to negative, if they are positive; then,
+        # fill up the 'total' column
+        self._df['amount'].fillna(0, inplace=True)
+        self._df['fee'].fillna(0, inplace=True)
         self._df.loc[self._df['fee'] > 0, 'fee'] = self._df['fee'] * -1
-        self._df['total'] = self._df['amount'] + self._df['fee']
+        self._df['total'] = self._df[['amount', 'fee']].sum(axis=1)
+
+        # dt_format = str()
+
+        # # Convert the time from string to datatime
+        self._df['time'] = pd.to_datetime(self._df['time'])

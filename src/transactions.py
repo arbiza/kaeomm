@@ -52,8 +52,8 @@ class Transactions:
     def add(self, transaction: list) -> None:
         pass
 
-    def add_bulk(self, df: pd.DataFrame) -> None:
-        pass
+    def add_bulk(self, new_df: pd.DataFrame) -> None:
+        self._df = pd.concat([self._df, new_df], ignore_index=True)
 
     @staticmethod
     def headers() -> list:
