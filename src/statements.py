@@ -4,6 +4,7 @@ from pandas.api.types import is_numeric_dtype
 from datetime import datetime
 
 from transactions import Transactions
+from config import Config
 
 
 class StatementException(Exception):
@@ -12,9 +13,10 @@ class StatementException(Exception):
 
 class StatementsParser:
 
-    def __init__(self, statement_path: str) -> None:
+    def __init__(self, statement_path: str, timezone: str) -> None:
         self._df = pd.DataFrame(columns=Transactions.headers())
         self._stmt = pd.read_csv(statement_path)
+        self._timezone = timezone
 
     @property
     def df(self):
@@ -30,10 +32,6 @@ class StatementsParser:
 
     def get_df_columns(self) -> list:
         return Transactions.headers()
-
-    def get_time_format(dt: str) -> str:
-        '''Returns the date/time format to parse str into datatime objects'''
-        pass
 
     def import_column(self, src_stmt_col: list, dst_df_col: str) -> None:
 
@@ -68,3 +66,8 @@ class StatementsParser:
 
         # # Convert the time from string to datatime
         self._df['time'] = pd.to_datetime(self._df['time'])
+
+        cfg = Config()
+        # if self._timezone != cfg.local_timezone:
+        self._df['time'] = self._df['time'].dt.tz_localize(
+            self._timezone).dt.tz_convert(cfg.local_timezone)

@@ -105,4 +105,4 @@ class Transactions:
 
     def sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)
-        self._df.reset_index(inplace=True)
+        self._df.reset_index(inplace=True, drop=True)

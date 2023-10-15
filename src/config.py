@@ -52,3 +52,12 @@ class Config:
     def transactions_db_path(self, value):
         raise ConfigException(
             'Transactions DB method not yet implemented')
+
+    @property
+    def local_timezone(self):
+        return self._config_db['local_timezone']
+
+    @local_timezone.setter
+    def local_timezone(self, value):
+        raise ConfigException(
+            'Error')

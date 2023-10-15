@@ -1,5 +1,7 @@
 import json
 import pandas
+import pytz
+import tzlocal
 
 from config import Config
 from statements import StatementsParser
@@ -70,13 +72,20 @@ class Sources:
 
 class Source:
 
-    def __init__(self, name: str, currency: str) -> None:
+    def __init__(self, name: str, currency: str, timezone: str = None) -> None:
         self._name = name
         self._currency = currency
         self._id = "{}-{}".format(name, currency)
         self._type = None
         self._stmt_columns_mapping = []
-        self._stmt_time_format = str()
+
+        if timezone is None:
+            self._stmt_timezone = tzlocal.get_localzone_name()
+        if timezone in pytz.all_timezones_set:
+            self._stmt_timezone = timezone
+        else:
+            raise SourcesException(
+                "There is no timezone named '{}'\n".format(timezone))
 
     def statement_column_mapping(self, src_col: list, dst_col: str) -> None:
         if dst_col not in Transactions.headers():
@@ -96,7 +105,7 @@ class Source:
             })
 
     def statement_parse(self, stmt_path: str) -> pandas.DataFrame:
-        parser = StatementsParser(stmt_path)
+        parser = StatementsParser(stmt_path, self._stmt_timezone)
 
         # Proceeds only if at least one column mapping has been set
         if len(self._stmt_columns_mapping) == 0:
