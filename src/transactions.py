@@ -3,7 +3,7 @@ import pandas as pd
 from config import Config
 
 
-class CorruptedTransctionsDB(Exception):
+class TransactionsException(Exception):
     pass
 
 
@@ -14,6 +14,11 @@ class Transactions:
     When instantiated, it loads the transactions history database into a Pandas
     DataFrame. The dataframe is ordered by date/time.
     '''
+
+    def __new__(cls, cfg: Config):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(Transactions, cls).__new__(cls)
+        return cls.instance
 
     def __init__(self, cfg: Config) -> None:
         '''
@@ -32,7 +37,7 @@ class Transactions:
             self._df = pd.read_csv(self._cfg.transactions_db_path, sep='|')
 
             if self._df.columns.values.tolist() != self.headers():
-                raise CorruptedTransctionsDB(
+                raise TransactionsException(
                     "Exception: Transactions DB is corrupted. \n"
                     "\n"
                     "  Expected headers:\n"
@@ -46,8 +51,18 @@ class Transactions:
         except FileNotFoundError:
             self._df = pd.DataFrame(columns=self.headers())
 
-        except CorruptedTransctionsDB as e:
+        except TransactionsException as e:
             print(str(e))
+
+    @property
+    def df(self):
+        raise TransactionsException(
+            'Transactions DF can\'t be accessed out of the class.')
+
+    @df.setter
+    def df(self, value):
+        raise TransactionsException(
+            'Transactions DF can\'t be directly modified.')
 
     def add(self, transaction: list) -> None:
         pass
@@ -74,6 +89,10 @@ class Transactions:
                 ]
 
     def print_to_cli(self, n_rows=10) -> None:
+        '''
+        Print the number of rows in Transactions DataFrame defined in n_rows
+        Print all columns
+        '''
         with pd.option_context('display.min_rows', n_rows, 'display.max_rows', n_rows):
             print(self._df)
 
