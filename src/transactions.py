@@ -73,5 +73,9 @@ class Transactions:
                 'tags'
                 ]
 
+    def print_to_cli(self, n_rows=10) -> None:
+        with pd.option_context('display.min_rows', n_rows, 'display.max_rows', n_rows):
+            print(self._df)
+
     def save(self) -> None:
         self._df.to_csv(self._cfg.transactions_db_path, sep='|', index=False)
