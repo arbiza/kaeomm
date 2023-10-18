@@ -81,9 +81,7 @@ class Transactions:
                 'fee',
                 'total',
                 'curr',
-                'id',
-                'ref',
-                'notes',
+                'note',
                 'category',
                 'tags'
                 ]
@@ -102,6 +100,10 @@ class Transactions:
 
     def save(self) -> None:
         self._df.to_csv(self._cfg.transactions_db_path, sep='|', index=False)
+
+    def search_n_add_category(self, key: str, category: str) -> None:
+        # before proceeding, the new category has to be added to the categories list
+        pass
 
     def sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)

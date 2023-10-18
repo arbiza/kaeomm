@@ -52,9 +52,18 @@ class StatementsParser:
                     ' - '.join, axis=1)
 
     def fill_up_column(self, dst_df_col: str, value: str) -> None:
+        '''
+        Fillup a column with the value provided.
+        '''
         self._df[dst_df_col] = value
 
     def conclude(self) -> None:
+        '''
+        Process the values in the columns after the importing.
+
+        The processing involves amounts calculation, currency convertion, 
+        datetime manipulation, etc. It
+        '''
         # Convert all the fee entries to negative, if they are positive; then,
         # fill up the 'total' column
         self._df['amount'].fillna(0, inplace=True)
@@ -62,12 +71,15 @@ class StatementsParser:
         self._df.loc[self._df['fee'] > 0, 'fee'] = self._df['fee'] * -1
         self._df['total'] = self._df[['amount', 'fee']].sum(axis=1)
 
-        # dt_format = str()
-
         # # Convert the time from string to datatime
         self._df['time'] = pd.to_datetime(self._df['time'])
 
+        # The time is processed as follows:
+        #  - Localize (set a timezone) to the datetime object which is importated
+        #    as timezone naive (required to convert)
+        #  - Convert the time to the users timezone
+        #  - Change the datetime object back as timezone naive for a better
+        #    readability (2022-12-12 13:09:48+01:00 -> 2022-12-12 13:09:48)
         cfg = Config()
-        # if self._timezone != cfg.local_timezone:
         self._df['time'] = self._df['time'].dt.tz_localize(
-            self._timezone).dt.tz_convert(cfg.local_timezone)
+            self._timezone).dt.tz_convert(cfg.local_timezone).dt.tz_localize(None)

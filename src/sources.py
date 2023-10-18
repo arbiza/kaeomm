@@ -94,7 +94,7 @@ class Source:
                     dst_col
                 )
             )
-        elif dst_col in ['curr', 'source', 'total', 'id', 'ref']:
+        elif dst_col in ['curr', 'source', 'total']:
             # Some fields will be automatically set during the statement parsing;
             # the user is not able to set them.
             pass

@@ -8,12 +8,12 @@ class ConfigException(Exception):
 class Config:
     '''
     '''
-    def __new__(cls):
+    def __new__(cls, config_dir: str):
         if not hasattr(cls, 'instance'):
             cls.instance = super(Config, cls).__new__(cls)
         return cls.instance
 
-    def __init__(self) -> None:
+    def __init__(self, config_dir: str) -> None:
         '''
         Headers of Transaction DataFrame:
 
@@ -30,34 +30,59 @@ class Config:
             - tags: List of tags
         '''
 
-        self._config_db = None
+        self._config_dir = config_dir if config_dir[-1] == '/' else config_dir + '/'
 
-        with open('../data/db/config.json', 'r') as f:
+        with open(self._config_dir + 'config.json', 'r') as f:
             self._config_db = json.load(f)
 
-    @property
-    def sources_db_path(self):
-        return self._config_db['sources_db']
-
-    @sources_db_path.setter
-    def sources_db_path(self, value):
-        raise ConfigException(
-            'Sources DB path method not yet implemented')
+        self.default_currency = self._config_db['default_currency']
+        self.local_timezone = self._config_db['local_timezone']
+        self.transactions_db_path = self._config_db['transactions_db']
+        self.sources_db_path = self._config_db['sources_db']
+        self._categories = list(self._config_db['categories'])
+        self._tags = list(self._config_db['tags'])
 
     @property
-    def transactions_db_path(self):
-        return self._config_db['transactions_db']
+    def categories(self):
+        return self._categories
 
-    @transactions_db_path.setter
-    def transactions_db_path(self, value):
+    @categories.setter
+    def categories(self, value):
         raise ConfigException(
-            'Transactions DB method not yet implemented')
+            '"categories" can\'t be set directly')
 
     @property
-    def local_timezone(self):
-        return self._config_db['local_timezone']
+    def tags(self):
+        return self._tags
 
-    @local_timezone.setter
-    def local_timezone(self, value):
+    @tags.setter
+    def tags(self, value):
         raise ConfigException(
-            'Error')
+            '"tags" can\'t be set directly')
+
+    def add_new_category(self, category: str) -> None:
+        if category not in self._categories:
+            self._categories.append(category)
+
+    def add_new_tag(self, tag: str) -> None:
+        if tag not in self._tags:
+            self._tags.append(tag)
+
+    def del_category(self, category: str) -> None:
+        self._categories.remove(category)
+
+    def del_tag(self, tag: str) -> None:
+        self._tags.remove(tag)
+
+    def save(self) -> bool:
+        config = {
+            "default_currency": self.default_currency,
+            "local_timezone": self.local_timezone,
+            "transactions_db": self.transactions_db_path,
+            "sources_db": self.sources_db_path,
+            "categories": self._categories,
+            "tags": self._tags
+        }
+        with open(self._config_dir + 'config.json', "w") as f:
+            f.write(json.dumps(config, indent=4))
+        return True
