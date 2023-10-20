@@ -76,6 +76,7 @@ class Transactions:
         return ['time',
                 'type',
                 'source',
+                'source_id',
                 'desc',
                 'amount',
                 'fee',
@@ -101,9 +102,23 @@ class Transactions:
     def save(self) -> None:
         self._df.to_csv(self._cfg.transactions_db_path, sep='|', index=False)
 
-    def search_n_add_category(self, key: str, category: str) -> None:
-        # before proceeding, the new category has to be added to the categories list
-        pass
+    def search_n_add_category_tag(self, col: str, key: str,
+                                  category: str = None,
+                                  tags: list = []) -> None:
+        self._cfg.add_new_category(category)
+        [self._cfg.add_new_tag(tag) for tag in tags]
+
+        if category is not None and len(tags) == 0:
+            self._df.loc[self._df[col].str.contains(
+                key), 'category'] = category
+
+        elif category is None and len(tags) > 0:
+            self._df.loc[self._df[col].str.contains(
+                key), 'tags'] = tags
+
+        elif category is not None and len(tags) > 0:
+            self._df.loc[self._df[col].str.contains(
+                key), ['category', 'tags']] = [category, tags]
 
     def sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)

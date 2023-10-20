@@ -1,5 +1,6 @@
 import json
 import pandas
+import time
 import pytz
 import tzlocal
 
@@ -12,72 +13,17 @@ class SourcesException(Exception):
     pass
 
 
-class Sources:
-    '''
-    Singleton class to manage all the sources the user has configured.
-
-    When the object is instanciated, it will load all the sources in the
-    database file.
-    '''
-    def __new__(cls):
-        if not hasattr(cls, 'instance'):
-            cls.instance = super(Sources, cls).__new__(cls)
-        return cls.instance
-
-    def __init__(self, cfg: Config) -> None:
-        '''
-        Loads the sources database into a list, if the database
-        exists. If not, it creates an empty DF with the set of columns defined in
-        this class "header()" static method.
-        '''
-
-        self._sources = []
-
-        # 'Config' is a Singleton class. self._cfg attributes' values will update
-        # if the Config object is modified anywhere else. This is specially
-        # important to keep the path to the files always actual.
-        self._cfg = cfg
-
-        # Loads the existing sources into the sources list
-        try:
-            with open(self._cfg.sources_db_path, 'r') as f:
-                self._sources_db = json.load(f)
-
-            # I have to load the Json sources into Objects
-
-        except FileNotFoundError:
-            pass
-
-        except SourcesException as e:
-            print(str(e))
-
-    @property
-    def sources(self):
-        return self._sources
-
-    @sources.setter
-    def sources(self, value):
-        raise SourcesException(
-            'Sources can\' be directly modified.')
-
-    @staticmethod
-    def headers() -> list:
-        '''Returns the Sources DataFrame headers'''
-        return ['id',
-                'name',
-                'type',
-                'note'
-                ]
-
-
 class Source:
 
-    def __init__(self, name: str, currency: str, timezone: str = None) -> None:
+    def __init__(self, name: str,
+                 currency: str,
+                 timezone: str = None,
+                 id: float = None) -> None:
         self._name = name
         self._currency = currency
-        self._id = "{}-{}".format(name, currency)
-        self._type = None
+        self._id = time.time() if id is None else float(id)
         self._stmt_columns_mapping = []
+        self.description = str()
 
         if timezone is None:
             self._stmt_timezone = tzlocal.get_localzone_name()
@@ -87,7 +33,26 @@ class Source:
             raise SourcesException(
                 "There is no timezone named '{}'\n".format(timezone))
 
-    def statement_column_mapping(self, src_col: list, dst_col: str) -> None:
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        # TODO
+        # changing name will be allowed, but it requires to change it in the
+        # transactions dataframe
+        raise SourcesException('"name" can\'t be directly modified YET.')
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        raise SourcesException('"id" can\'t be directly modified.')
+
+    def add_stmt_column_mapping(self, src_col: list, dst_col: str) -> None:
         if dst_col not in Transactions.headers():
             raise SourcesException(
                 "The Transactions DataFrame has no column named '{}'\n".format(
@@ -126,13 +91,118 @@ class Source:
          for l in self._stmt_columns_mapping]
 
         parser.fill_up_column('curr', self._currency)
-        parser.fill_up_column('source', self._id)
+        parser.fill_up_column('source', self._name)
+        parser.fill_up_column('source_id', self._id)
         parser.conclude()
         return parser.df
 
-    def to_json(self) -> json:
-        return json.dumps({
+    def to_dict(self) -> json:
+        return {
             "name": self._name,
             "currency": self._currency,
+            "id": self._id,
+            "description": self.description,
+            "stmt_timezone": self._stmt_timezone,
             "stmt_columns_mapping": self._stmt_columns_mapping
-        })
+        }
+
+
+# Types
+# bank account
+# savings
+# Investiments (like a bank account)
+# cash
+# credit card
+
+
+class SourcesWrapper:
+    '''
+    Singleton class to manage all the sources the user has configured. It's like
+    a wrapper for sources with some additional functions, such as handling the 
+    sources database.
+
+    When the object is instanciated, it will load all the sources in the
+    database file.
+    '''
+    def __new__(cls, cfg: Config):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(SourcesWrapper, cls).__new__(cls)
+        return cls.instance
+
+    def __init__(self, cfg: Config) -> None:
+        '''
+        Loads the sources database into a list, if the database
+        exists. If not, it creates an empty DF with the set of columns defined in
+        this class "header()" static method.
+        '''
+
+        self._sources = []
+
+        # 'Config' is a Singleton class. self._cfg attributes' values will update
+        # if the Config object is modified anywhere else. This is specially
+        # important to keep the path to the files always actual.
+        self._cfg = cfg
+
+        # Loads the existing sources into the sources list
+        try:
+            with open(self._cfg.sources_db_path, 'r') as f:
+                self._sources_db = json.load(f)
+
+        except FileNotFoundError:
+            pass
+
+        except SourcesException as e:
+            print(str(e))
+
+        for s in self._sources_db['Sources']:
+            src = Source(s['name'],
+                         s['currency'],
+                         s['stmt_timezone'],
+                         s['id'])
+            src.description = s['description']
+            [src.add_stmt_column_mapping(m['src'], m['dst'])
+                for m in s['stmt_columns_mapping']]
+            self._sources.append(src)
+
+    @property
+    def sources(self):
+        return self._sources
+
+    @sources.setter
+    def sources(self, value):
+        raise SourcesException(
+            'Sources can\' be directly modified.')
+
+    @staticmethod
+    def headers() -> list:
+        '''Returns the Sources DataFrame headers'''
+        return ['id',
+                'name',
+                'type',
+                'note'
+                ]
+
+    def add_source(self, src: Source) -> None:
+
+        for s in self._sources:
+            if src.name == s.name:
+                raise SourcesException(
+                    "There is already a source named '{}'".format(src.name))
+
+        self._sources.append(src)
+        self.save()
+
+    def get_source(self, name: str) -> Source:
+        '''
+        Returns the Source object with the name passed as argument.
+        '''
+        return [s for s in self._sources if s.name == name][0]
+
+    def save(self) -> None:
+        srcs_json = {
+            "Sources": [s.to_dict() for s in self._sources]
+        }
+
+        with open(self._cfg.sources_db_path, "w") as f:
+            f.write(json.dumps(srcs_json, indent=4))
+        return True

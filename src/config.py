@@ -8,12 +8,12 @@ class ConfigException(Exception):
 class Config:
     '''
     '''
-    def __new__(cls, config_dir: str):
+    def __new__(cls, config_dir: str = None):
         if not hasattr(cls, 'instance'):
             cls.instance = super(Config, cls).__new__(cls)
         return cls.instance
 
-    def __init__(self, config_dir: str) -> None:
+    def __init__(self, config_dir: str = None) -> None:
         '''
         Headers of Transaction DataFrame:
 
@@ -29,8 +29,8 @@ class Config:
             - category: Category name
             - tags: List of tags
         '''
-
-        self._config_dir = config_dir if config_dir[-1] == '/' else config_dir + '/'
+        if config_dir is not None:
+            self._config_dir = config_dir if config_dir[-1] == '/' else config_dir + '/'
 
         with open(self._config_dir + 'config.json', 'r') as f:
             self._config_db = json.load(f)
