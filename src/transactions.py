@@ -1,6 +1,7 @@
 import pandas as pd
 
 from config import Config
+import utils
 
 
 class TransactionsException(Exception):
@@ -34,7 +35,8 @@ class Transactions:
         self._cfg = cfg
 
         try:
-            self._df = pd.read_csv(self._cfg.transactions_db_path, sep='|')
+            self._df = pd.read_csv(
+                self._cfg.db_dir + 'transactions.csv', sep='|')
 
             if self._df.columns.values.tolist() != self.headers():
                 raise TransactionsException(
@@ -67,8 +69,24 @@ class Transactions:
     def add(self, transaction: list) -> None:
         pass
 
-    def add_bulk(self, new_df: pd.DataFrame) -> None:
-        self._df = pd.concat([self._df, new_df], ignore_index=True)
+    def add_bulk(self, new_dfs: list) -> None:
+
+        for new_df in new_dfs:
+            self._df = new_df if self._df.empty else pd.concat(
+                [self._df, new_df], ignore_index=True)
+        self._sort()
+
+    def backup(self) -> None:
+        '''
+        Saves the current transactions database to a file named with a timestamp
+        '''
+        self._df.to_csv(self._cfg.db_dir + 'transactions_' +
+                        utils.datetime_for_filename() + '.csv',
+                        sep='|',
+                        index=False)
+
+    def df_details(self) -> None:
+        print(self._df.info())
 
     @staticmethod
     def headers() -> list:
@@ -99,8 +117,16 @@ class Transactions:
             else:
                 print(self._df[columns])
 
+    def reset(self) -> None:
+        '''
+        Backup the current database, then clean it up.
+        '''
+        self.backup()
+        self._df = pd.DataFrame(columns=self.headers())
+
     def save(self) -> None:
-        self._df.to_csv(self._cfg.transactions_db_path, sep='|', index=False)
+        self._df.to_csv(self._cfg.db_dir + 'transactions.csv',
+                        sep='|', index=False)
 
     def search_n_add_category_tag(self, col: str, key: str,
                                   category: str = None,
@@ -120,6 +146,6 @@ class Transactions:
             self._df.loc[self._df[col].str.contains(
                 key), ['category', 'tags']] = [category, tags]
 
-    def sort(self) -> None:
+    def _sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)
         self._df.reset_index(inplace=True, drop=True)

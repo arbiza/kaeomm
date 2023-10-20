@@ -37,9 +37,7 @@ class Config:
 
         self.default_currency = self._config_db['default_currency']
         self.local_timezone = self._config_db['local_timezone']
-        self.transactions_db_path = self._config_db['transactions_db']
-        self.sources_db_path = self._config_db['sources_db']
-        self._categories = list(self._config_db['categories'])
+        self.db_dir = self._config_db['db_dir']
         self._tags = list(self._config_db['tags'])
 
     @property

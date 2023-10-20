@@ -7,6 +7,7 @@ import tzlocal
 from config import Config
 from statements import StatementsParser
 from transactions import Transactions
+import utils
 
 
 class SourcesException(Exception):
@@ -115,7 +116,7 @@ class Source:
 # credit card
 
 
-class SourcesWrapper:
+class Sources:
     '''
     Singleton class to manage all the sources the user has configured. It's like
     a wrapper for sources with some additional functions, such as handling the 
@@ -126,7 +127,7 @@ class SourcesWrapper:
     '''
     def __new__(cls, cfg: Config):
         if not hasattr(cls, 'instance'):
-            cls.instance = super(SourcesWrapper, cls).__new__(cls)
+            cls.instance = super(Sources, cls).__new__(cls)
         return cls.instance
 
     def __init__(self, cfg: Config) -> None:
@@ -145,8 +146,8 @@ class SourcesWrapper:
 
         # Loads the existing sources into the sources list
         try:
-            with open(self._cfg.sources_db_path, 'r') as f:
-                self._sources_db = json.load(f)
+            with open(self._cfg.db_dir + 'sources.json', 'r') as f:
+                sources_db_json = json.load(f)
 
         except FileNotFoundError:
             pass
@@ -154,15 +155,16 @@ class SourcesWrapper:
         except SourcesException as e:
             print(str(e))
 
-        for s in self._sources_db['Sources']:
-            src = Source(s['name'],
-                         s['currency'],
-                         s['stmt_timezone'],
-                         s['id'])
-            src.description = s['description']
-            [src.add_stmt_column_mapping(m['src'], m['dst'])
-                for m in s['stmt_columns_mapping']]
-            self._sources.append(src)
+        else:
+            for s in sources_db_json['Sources']:
+                src = Source(s['name'],
+                             s['currency'],
+                             s['stmt_timezone'],
+                             s['id'])
+                src.description = s['description']
+                [src.add_stmt_column_mapping(m['src'], m['dst'])
+                    for m in s['stmt_columns_mapping']]
+                self._sources.append(src)
 
     @property
     def sources(self):
@@ -192,17 +194,37 @@ class SourcesWrapper:
         self._sources.append(src)
         self.save()
 
+    def backup(self) -> None:
+        '''
+        Saves the current sources database to a file named with a timestamp
+        '''
+        srcs_json = {
+            "Sources": [s.to_dict() for s in self._sources]
+        }
+
+        with open(self._cfg.db_dir + 'sources_' + utils.datetime_for_filename() + '.csv', "w") as f:
+            f.write(json.dumps(srcs_json, indent=4))
+        return True
+
     def get_source(self, name: str) -> Source:
         '''
         Returns the Source object with the name passed as argument.
         '''
-        return [s for s in self._sources if s.name == name][0]
+        src = [s for s in self._sources if s.name == name]
+        return src[0] if len(src) > 0 else []
+
+    def reset(self) -> None:
+        '''
+        Backup the current database, then clean it up.
+        '''
+        self.backup()
+        self._sources.clear()
 
     def save(self) -> None:
         srcs_json = {
             "Sources": [s.to_dict() for s in self._sources]
         }
 
-        with open(self._cfg.sources_db_path, "w") as f:
+        with open(self._cfg.db_dir + 'sources.json', "w") as f:
             f.write(json.dumps(srcs_json, indent=4))
         return True

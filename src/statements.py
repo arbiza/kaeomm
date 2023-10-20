@@ -41,15 +41,30 @@ class StatementsParser:
         elif len(src_stmt_col) > 1:
             # To avoid problems, the program has to identify whether the values
             # are strings or numbers. The empty cells have to be filled-up.
-            if is_numeric_dtype(self._stmt[src_stmt_col[0]].dtype):
-                [self._stmt[c].fillna(0, inplace=True) for c in src_stmt_col]
-                self._df[dst_df_col] = self._stmt[src_stmt_col].sum(axis=1)
+            for col in src_stmt_col:
 
-            elif is_string_dtype(self._stmt[src_stmt_col[0]].dtype):
-                [self._stmt[c].fillna('No ' + c, inplace=True)
-                 for c in src_stmt_col]
-                self._df[dst_df_col] = self._stmt[src_stmt_col].agg(
-                    ' - '.join, axis=1)
+                # 1. check whether any of the columns is a string dtype; if any,
+                # all will be handled as strings. (Pandas may consider empty
+                # columns as 'float64' dtype)
+                if is_string_dtype(self._stmt[col].dtype):
+
+                    # 2. set all source columns dtype as 'object' -- it prevents
+                    # a warning.
+                    for c in src_stmt_col:
+                        self._stmt[c] = self._stmt[c].astype(object)
+
+                    # 3. fill up the empty rows
+                    [self._stmt[c].fillna('No ' + c, inplace=True)
+                     for c in src_stmt_col]
+
+                    # 4. combine the columns
+                    self._df[dst_df_col] = self._stmt[src_stmt_col].agg(
+                        ' - '.join, axis=1)
+                    return
+
+            [self._stmt[c].fillna(0, inplace=True)
+             for c in src_stmt_col]
+            self._df[dst_df_col] = self._stmt[src_stmt_col].sum(axis=1)
 
     def fill_up_column(self, dst_df_col: str, value: str) -> None:
         '''
