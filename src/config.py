@@ -38,6 +38,7 @@ class Config:
         self.default_currency = self._config_db['default_currency']
         self.local_timezone = self._config_db['local_timezone']
         self.db_dir = self._config_db['db_dir']
+        self._categories = self._config_db['categories']
         self._tags = list(self._config_db['tags'])
 
     @property

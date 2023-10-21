@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 
 from config import Config
 import utils
@@ -128,23 +129,42 @@ class Transactions:
         self._df.to_csv(self._cfg.db_dir + 'transactions.csv',
                         sep='|', index=False)
 
-    def search_n_add_category_tag(self, col: str, key: str,
-                                  category: str = None,
-                                  tags: list = []) -> None:
-        self._cfg.add_new_category(category)
-        [self._cfg.add_new_tag(tag) for tag in tags]
+    def search_update_category_tag(self, col, key, category=None, tags=[]) -> None:
+        '''
+        This method searchs for rows with a given value in a given column and
+        updates the category and/or the tag.
 
-        if category is not None and len(tags) == 0:
-            self._df.loc[self._df[col].str.contains(
-                key), 'category'] = category
+        Parameters
+        ----------
+            col : str
+                name of the column where the program will search for the 'key'
+            key : str or number
+                text or number the program will search for
+            category : str
+                category to apply to the transaction (default: None)
+            tags : list
+                list of tags to apply to the transaction (default: [])
+        '''
 
-        elif category is None and len(tags) > 0:
-            self._df.loc[self._df[col].str.contains(
-                key), 'tags'] = tags
+        if category is not None:
+            self._cfg.add_new_category(category)
 
-        elif category is not None and len(tags) > 0:
-            self._df.loc[self._df[col].str.contains(
-                key), ['category', 'tags']] = [category, tags]
+            if is_numeric_dtype(self._df[col].dtype):
+                self._df['category'] = self._df.apply(
+                    lambda s: category if key == s[col] else s['category'], axis=1)
+            else:
+                self._df['category'] = self._df.apply(
+                    lambda s: category if key in s[col] else s['category'], axis=1)
+
+        if len(tags) > 0:
+            [self._cfg.add_new_tag(tag) for tag in tags]
+
+            if is_numeric_dtype(self._df[col].dtype):
+                self._df['tags'] = self._df.apply(
+                    lambda s: tags if key == s[col] else s['tags'], axis=1)
+            else:
+                self._df['tags'] = self._df.apply(
+                    lambda s: tags if key in s[col] else s['tags'], axis=1)
 
     def _sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)
