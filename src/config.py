@@ -38,8 +38,9 @@ class Config:
         self.default_currency = self._config_db['default_currency']
         self.local_timezone = self._config_db['local_timezone']
         self.db_dir = self._config_db['db_dir']
-        self._categories = self._config_db['categories']
-        self._tags = list(self._config_db['tags'])
+        self._categories = [i.lower().capitalize()
+                            for i in self._config_db['categories']]
+        self._tags = [i.lower().capitalize() for i in self._config_db['tags']]
 
     @property
     def categories(self):
@@ -61,11 +62,11 @@ class Config:
 
     def add_new_category(self, category: str) -> None:
         if category not in self._categories:
-            self._categories.append(category)
+            self._categories.append(category.lower().capitalize())
 
     def add_new_tag(self, tag: str) -> None:
         if tag not in self._tags:
-            self._tags.append(tag)
+            self._tags.append(tag.lower().capitalize())
 
     def del_category(self, category: str) -> None:
         self._categories.remove(category)
