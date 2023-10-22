@@ -181,6 +181,14 @@ class Transactions:
         else:
             return row['tags']
 
+    def update_transactions_category(self, col, key, category=str()) -> None:
+        if is_numeric_dtype(self._df[col].dtype):
+            self._df['category'] = self._df.apply(
+                lambda s: category if key == s[col] else s['category'], axis=1)
+        else:
+            self._df['category'] = self._df.apply(
+                lambda s: category if key in s[col] else s['category'], axis=1)
+
     def bulk_update_category_tags(self, col, key, category=None, tags=[], overwrite=False) -> None:
         '''
         This method searchs for rows with a given value in a given column and
