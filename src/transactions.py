@@ -83,12 +83,18 @@ class Transactions:
                         sep='|',
                         index=False)
 
+    def get_transactions_with_amount(self, amount) -> pd.DataFrame:
+        return self._df.loc[self._df['amount'] == amount]
+
     def get_transactions_with_category(self, category) -> pd.DataFrame:
         tmp = self._df.loc[~self._df['category'].isna()]
         return tmp.loc[tmp['category'] == category]
 
     def get_transactions_without_category(self) -> pd.DataFrame:
         return self._df.loc[self._df['category'].isna()]
+
+    def get_transactions_with_description(self, description) -> pd.DataFrame:
+        return self._df.loc[self._df['desc'].str.contains(description)]
 
     def get_transactions_with_tag(self, tag) -> pd.DataFrame:
         tmp = self._df.loc[~self._df['tags'].isna()]
@@ -170,9 +176,8 @@ class Transactions:
             if overwrite is True or pd.isna(row['tags']):
                 return ','.join(tags)
             else:
-                return row['tags'] + ',' + ','.join(
-                    [t for t in tags if t not in row['tags']]
-                )
+                return ','.join(row['tags'].split(',') + [t for t in tags if t not in row['tags']]
+                                )
         else:
             return row['tags']
 
@@ -200,7 +205,7 @@ class Transactions:
         is_numeric_column = is_numeric_dtype(self._df[col].dtype)
 
         if category is not None:
-            self._cfg.add_new_category(category)
+            category = self._cfg.add_new_category(category)
 
             if is_numeric_column:
                 self._df['category'] = self._df.apply(
@@ -210,10 +215,10 @@ class Transactions:
                     lambda s: category if key in s[col] else s['category'], axis=1)
 
         if len(tags) > 0:
-            [self._cfg.add_new_tag(tag) for tag in tags]
+            tags = [self._cfg.add_new_tag(tag) for tag in tags]
 
             self._df['tags'] = self._df.apply(self._update_tags, args=(
-                col, is_numeric_column, key, tags, True), axis=1)
+                col, is_numeric_column, key, tags, overwrite), axis=1)
 
     def _sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)
