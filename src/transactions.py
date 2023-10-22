@@ -86,8 +86,11 @@ class Transactions:
                         sep='|',
                         index=False)
 
-    def df_details(self) -> None:
-        print(self._df.info())
+    def get_transactions_without_category(self) -> pd.DataFrame:
+        return self._df.loc[self._df['category'].isna()]
+
+    def get_transactions_without_tags(self) -> pd.DataFrame:
+        return self._df.loc[self._df['tags'].isna()]
 
     @staticmethod
     def headers() -> list:
