@@ -129,7 +129,44 @@ class Transactions:
         self._df.to_csv(self._cfg.db_dir + 'transactions.csv',
                         sep='|', index=False)
 
-    def search_update_category_tag(self, col, key, category=None, tags=[]) -> None:
+    @staticmethod
+    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=False) -> list:
+        '''
+        Checkes for matches in the column informed and updates the tags.
+
+        When the column with the values to be evaluated is numeric, the key has
+        to be the same; when it's a string, it will look for a substring.
+
+        It may overwrite the tags, or append a new one.
+        This is a static method firstly designed to be used as an auxiliary 
+        function for Pandas apply.
+
+        Parameters
+        ----------
+            column : str
+                name of the column where the program will search for the 'key'
+            numeric_col : bool
+                indicates whether the column where the search will be performed
+                is numeric or string.
+            key : str or number
+                text or number the program will search for
+            tags : list
+                list of tags to apply to the transaction (default: [])
+            overwrite : bool
+                when False, the tags will be added to the existing transaction's
+                tag list; when True, it overwrites with the new values. (defaul
+                False)
+        '''
+
+        if (numeric_col and key == row[column]) or (not numeric_col and key in row[column]):
+            if overwrite is True:
+                return tags
+            else:
+                return tags if pd.isna(row['tags']) else tags + row['tags']
+        else:
+            return row['tags']
+
+    def bulk_update_category_tags(self, col, key, category=None, tags=[], overwrite=False) -> None:
         '''
         This method searchs for rows with a given value in a given column and
         updates the category and/or the tag.
@@ -144,12 +181,18 @@ class Transactions:
                 category to apply to the transaction (default: None)
             tags : list
                 list of tags to apply to the transaction (default: [])
+            overwrite : bool
+                when False, the tags will be added to the existing transaction's
+                tag list; when True, it overwrites with the new values. (defaul
+                False)
         '''
+
+        is_numeric_column = is_numeric_dtype(self._df[col].dtype)
 
         if category is not None:
             self._cfg.add_new_category(category)
 
-            if is_numeric_dtype(self._df[col].dtype):
+            if is_numeric_column:
                 self._df['category'] = self._df.apply(
                     lambda s: category if key == s[col] else s['category'], axis=1)
             else:
@@ -159,12 +202,8 @@ class Transactions:
         if len(tags) > 0:
             [self._cfg.add_new_tag(tag) for tag in tags]
 
-            if is_numeric_dtype(self._df[col].dtype):
-                self._df['tags'] = self._df.apply(
-                    lambda s: tags if key == s[col] else s['tags'], axis=1)
-            else:
-                self._df['tags'] = self._df.apply(
-                    lambda s: tags if key in s[col] else s['tags'], axis=1)
+            self._df['tags'] = self._df.apply(self._update_tags, args=(
+                col, is_numeric_column, key, tags, True), axis=1)
 
     def _sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)
