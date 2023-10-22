@@ -67,9 +67,6 @@ class Transactions:
         raise TransactionsException(
             'Transactions DF can\'t be directly modified.')
 
-    def add(self, transaction: list) -> None:
-        pass
-
     def add_bulk(self, new_dfs: list) -> None:
 
         for new_df in new_dfs:
@@ -86,8 +83,16 @@ class Transactions:
                         sep='|',
                         index=False)
 
+    def get_transactions_with_category(self, category) -> pd.DataFrame:
+        tmp = self._df.loc[~self._df['category'].isna()]
+        return tmp.loc[tmp['category'] == category]
+
     def get_transactions_without_category(self) -> pd.DataFrame:
         return self._df.loc[self._df['category'].isna()]
+
+    def get_transactions_with_tag(self, tag) -> pd.DataFrame:
+        tmp = self._df.loc[~self._df['tags'].isna()]
+        return tmp.loc[tmp['tags'].str.contains(tag)]
 
     def get_transactions_without_tags(self) -> pd.DataFrame:
         return self._df.loc[self._df['tags'].isna()]
@@ -133,7 +138,7 @@ class Transactions:
                         sep='|', index=False)
 
     @staticmethod
-    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=False) -> list:
+    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=False) -> str:
         '''
         Checkes for matches in the column informed and updates the tags.
 
@@ -162,10 +167,12 @@ class Transactions:
         '''
 
         if (numeric_col and key == row[column]) or (not numeric_col and key in row[column]):
-            if overwrite is True:
-                return tags
+            if overwrite is True or pd.isna(row['tags']):
+                return ','.join(tags)
             else:
-                return tags if pd.isna(row['tags']) else tags + row['tags']
+                return row['tags'] + ',' + ','.join(
+                    [t for t in tags if t not in row['tags']]
+                )
         else:
             return row['tags']
 
