@@ -116,6 +116,7 @@ class Transactions:
                 'total',
                 'curr',
                 'note',
+                'system_cat',
                 'category',
                 'tags'
                 ]
@@ -142,6 +143,10 @@ class Transactions:
     def save(self) -> None:
         self._df.to_csv(self._cfg.db_dir + 'transactions.csv',
                         sep='|', index=False)
+
+    def _sort(self) -> None:
+        self._df.sort_values(by=['time'], inplace=True)
+        self._df.reset_index(inplace=True, drop=True)
 
     def update_transactions_category(self, col, key, category=str()):
         '''
@@ -173,9 +178,9 @@ class Transactions:
         else:
             self._df['category'] = self._df.apply(
                 lambda s: category if key in s[col] else s['category'], axis=1)
-    
-        @staticmethod
-    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=False) -> str:
+
+    @staticmethod
+    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=False):
         '''
         Checkes for matches in the column informed and updates the tags.
 
@@ -207,8 +212,7 @@ class Transactions:
             if overwrite is True or pd.isna(row['tags']):
                 return ','.join(tags)
             else:
-                return ','.join(row['tags'].split(',') + [t for t in tags if t not in row['tags']]
-                                )
+                return ','.join(row['tags'].split(',') + [t for t in tags if t not in row['tags']])
         else:
             return row['tags']
 
@@ -244,7 +248,3 @@ class Transactions:
 
         self._df['tags'] = self._df.apply(self._update_tags, args=(
             col, is_numeric_dtype(self._df[col].dtype), key, tags, overwrite), axis=1)
-
-    def _sort(self) -> None:
-        self._df.sort_values(by=['time'], inplace=True)
-        self._df.reset_index(inplace=True, drop=True)
