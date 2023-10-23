@@ -1,5 +1,6 @@
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
+import re
 
 from config import Config
 import utils
@@ -57,6 +58,8 @@ class Transactions:
         except TransactionsException as e:
             print(str(e))
 
+        self._df['time'] = pd.to_datetime(self._df['time'])
+
     @property
     def df(self):
         raise TransactionsException(
@@ -82,6 +85,40 @@ class Transactions:
                         utils.datetime_for_filename() + '.csv',
                         sep='|',
                         index=False)
+
+    def get_transactions_on_date(self, start, end=None):
+        '''
+        Returns the transactions realized on a date or between dates.
+
+        If the end date is not provided, it will return the transaction on a 
+        single day. Otherwise it returns the dates from 'start' to 'end'
+
+        Parameters
+        ----------
+        start : str
+            start date in ISO format (yyyy-mm-dd)
+        end : str, optional
+            end date in ISO format (yyyy-mm-dd)
+
+        Returns
+        -------
+        Pandas DataFrame
+        '''
+
+        pattern = '^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
+
+        if not re.search(pattern, start):
+            raise TransactionsException(
+                'The dates must be passed as yyyy-mm-dd; {} doesn\'t match or is not a valid date.'.format(start))
+
+        if end is not None and not re.search(pattern, end):
+            raise TransactionsException(
+                'The dates must be passed as yyyy-mm-dd; {} doesn\'t match or is not a valid date.'.format(end))
+
+        if end is None:
+            return self._df[(self._df['time'].dt.strftime('%Y-%m-%d') == start)]
+        else:
+            return self._df[(self._df['time'].dt.strftime('%Y-%m-%d') >= start) & (self._df['time'].dt.strftime('%Y-%m-%d') <= end)]
 
     def get_transactions_with_amount(self, amount) -> pd.DataFrame:
         return self._df.loc[self._df['amount'] == amount]
