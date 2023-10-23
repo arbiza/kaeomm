@@ -185,6 +185,56 @@ class Transactions:
         self._df.sort_values(by=['time'], inplace=True)
         self._df.reset_index(inplace=True, drop=True)
 
+    def _system_category(self, i=[], col=None, key=None, system_category=str()):
+        '''
+        Adds or deletes system_cat to transactions based on a search or at a 
+        specific index. It's meant to be used by the class only.
+
+        When 'index' is set, it will update the specified rows; when not, it will
+        search for 'key' in 'col'.
+
+        Parameters
+        ----------
+        i : list
+            list of indexes of the rows to be modified
+        col : str
+            name of the column to perform the search
+        key : any
+            value the code will search for in the column
+        category : str, optional, default=''
+            category to be added to the transaction. When empty, the existing 
+            one will be removed.
+
+        Returns
+        -------
+        None
+        '''
+
+        if not isinstance(i, list):
+            raise TransactionsException(
+                'The method \'_system_category\' expects \'i\' as a list, it received a {}'.format(type(i)))
+
+        system_category = system_category.lower()
+
+        if system_category != '' and system_category not in self._cfg.system_categories:
+            raise TransactionsException(
+                'There is no system category named as \'{}\' and it can\'t be defined'.format(system_category))
+
+        if len(i) > 0:
+            self._df['system_cat'][i] = system_category
+
+        elif col is not None and key is not None:
+            if is_numeric_dtype(self._df[col].dtype):
+                self._df['system_cat'] = self._df.apply(
+                    lambda s: system_category if key == s[col] else s['system_cat'], axis=1)
+            else:
+                self._df['system_cat'] = self._df.apply(
+                    lambda s: system_category if key.lower() in s[col].lower() else s['system_cat'], axis=1)
+        else:
+            raise TransactionsException(
+                'Either \'i\' must be set or \'col\' and \'key\'.\n'
+                'Parameters received are: i: {}, col: {}, key: {}'.format(i, col, key))
+
     def update_transaction_category_at_index(self, i, category=str()):
         '''
         Adds or deletes transactions category based on a search.
@@ -195,7 +245,7 @@ class Transactions:
         Parameters
         ----------
         i : list
-            name of the column to perform the search
+            list of indexes of the rows to be modified
         category : str, optional, default=''
             category to be added to the transaction. When empty, the existing 
             one will be removed.
@@ -223,7 +273,7 @@ class Transactions:
         Parameters
         ----------
         i : list
-            name of the column to perform the search
+            list of indexes of the rows to be modified
         tags : list, optional, default=[]
             list with categories to be added to the transaction. If empty and
             overwrite is True, the existing tags will be removed.
@@ -240,7 +290,7 @@ class Transactions:
             raise TransactionsException(
                 'The method \'update_transaction_tags_at_index\' expects two lists, it received {} and {}'.format(type(i), type(tags)))
 
-        tags = [self._cfg.add_new_tag(tag) for tag in list(set(tags))]
+        tags = [self._cfg.add_new_tag(tag) for tag in tags]
 
         for p in i:
             if overwrite or pd.isna(self._df['tags'][p]):

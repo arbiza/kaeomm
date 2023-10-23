@@ -42,6 +42,11 @@ class Config:
                             for i in self._config_db['categories']]
         self._tags = [i.lower().capitalize() for i in self._config_db['tags']]
 
+        self._system_categories = [
+            'cash withdraw',  # cash withdraws are not expenses
+            'self transfer'  # moving from between sources are not accounted
+        ]
+
     @property
     def categories(self):
         return self._categories
@@ -59,6 +64,14 @@ class Config:
     def tags(self, value):
         raise ConfigException(
             '"tags" can\'t be set directly')
+
+    @property
+    def system_categories(self):
+        return self._system_categories
+
+    @system_categories.setter
+    def system_categories(self, value):
+        raise ConfigException('System Categories are hard-coded.')
 
     def add_new_category(self, category: str) -> str:
         c = category.lower().capitalize()
