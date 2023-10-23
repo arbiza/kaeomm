@@ -94,11 +94,11 @@ class Transactions:
         return self._df.loc[self._df['category'].isna()]
 
     def get_transactions_with_description(self, description) -> pd.DataFrame:
-        return self._df.loc[self._df['desc'].str.contains(description)]
+        return self._df.loc[self._df['desc'].str.contains(description, case=False)]
 
     def get_transactions_with_tag(self, tag) -> pd.DataFrame:
         tmp = self._df.loc[~self._df['tags'].isna()]
-        return tmp.loc[tmp['tags'].str.contains(tag)]
+        return tmp.loc[tmp['tags'].str.contains(tag, case=False)]
 
     def get_transactions_without_tags(self) -> pd.DataFrame:
         return self._df.loc[self._df['tags'].isna()]
@@ -177,7 +177,7 @@ class Transactions:
                 lambda s: category if key == s[col] else s['category'], axis=1)
         else:
             self._df['category'] = self._df.apply(
-                lambda s: category if key in s[col] else s['category'], axis=1)
+                lambda s: category if key.lower() in s[col].lower() else s['category'], axis=1)
 
     @staticmethod
     def _update_tags(row, column, numeric_col, key, tags=[], overwrite=False):
