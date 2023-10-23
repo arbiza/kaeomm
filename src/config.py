@@ -60,13 +60,17 @@ class Config:
         raise ConfigException(
             '"tags" can\'t be set directly')
 
-    def add_new_category(self, category: str) -> None:
-        if category not in self._categories:
-            self._categories.append(category.lower().capitalize())
+    def add_new_category(self, category: str) -> str:
+        c = category.lower().capitalize()
+        if c not in self._categories:
+            self._categories.append(c)
+        return c
 
-    def add_new_tag(self, tag: str) -> None:
-        if tag not in self._tags:
-            self._tags.append(tag.lower().capitalize())
+    def add_new_tag(self, tag: str) -> str:
+        t = tag.lower().capitalize()
+        if t not in self._tags:
+            self._tags.append(t)
+        return t
 
     def del_category(self, category: str) -> None:
         self._categories.remove(category)
@@ -78,8 +82,7 @@ class Config:
         config = {
             "default_currency": self.default_currency,
             "local_timezone": self.local_timezone,
-            "transactions_db": self.transactions_db_path,
-            "sources_db": self.sources_db_path,
+            "db_dir": self.db_dir,
             "categories": self._categories,
             "tags": self._tags
         }
