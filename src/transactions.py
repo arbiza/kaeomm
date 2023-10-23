@@ -236,9 +236,9 @@ class Transactions:
         None
         '''
 
-        if not isinstance(i, list):
+        if not isinstance(i, list) or not isinstance(tags, list):
             raise TransactionsException(
-                'The method \'update_transaction_tags_at_index\' expects \'i\' as a list, it received a {}'.format(type(i)))
+                'The method \'update_transaction_tags_at_index\' expects two lists, it received {} and {}'.format(type(i), type(tags)))
 
         tags = [self._cfg.add_new_tag(tag) for tag in list(set(tags))]
 
