@@ -185,9 +185,73 @@ class Transactions:
         self._df.sort_values(by=['time'], inplace=True)
         self._df.reset_index(inplace=True, drop=True)
 
+    def update_transaction_category_at_index(self, i, category=str()):
+        '''
+        Adds or deletes transactions category based on a search.
+
+        If 'category' is empty, it will remove the existing category in the 
+        transaction.
+
+        Parameters
+        ----------
+        i : list
+            name of the column to perform the search
+        category : str, optional, default=''
+            category to be added to the transaction. When empty, the existing 
+            one will be removed.
+
+        Returns
+        -------
+        None
+        '''
+
+        if not isinstance(i, list):
+            raise TransactionsException(
+                'The method \'update_transaction_category_at_index\' expects \'i\' as a list, it received a {}'.format(type(i)))
+
+        category = self._cfg.add_new_category(category)
+
+        self._df['category'][i] = category
+
+    def update_transaction_tags_at_index(self, i, tags=[], overwrite=True):
+        '''
+        Adds or deletes transactions category based on a search.
+
+        If 'category' is empty, it will remove the existing category in the 
+        transaction.
+
+        Parameters
+        ----------
+        i : list
+            name of the column to perform the search
+        tags : list, optional, default=[]
+            list with categories to be added to the transaction. If empty and
+            overwrite is True, the existing tags will be removed.
+        overwrite : book, optional, default=True
+            when False, the tags will be added to the existing transaction's
+            tag list; when True, it overwrites with the new values.
+
+        Returns
+        -------
+        None
+        '''
+
+        if not isinstance(i, list):
+            raise TransactionsException(
+                'The method \'update_transaction_tags_at_index\' expects \'i\' as a list, it received a {}'.format(type(i)))
+
+        tags = [self._cfg.add_new_tag(tag) for tag in list(set(tags))]
+
+        for p in i:
+            if overwrite or pd.isna(self._df['tags'][p]):
+                self._df['tags'][p] = ','.join(tags)
+            else:
+                self._df['tags'][p] = ','.join(self._df['tags'][p].split(
+                    ',') + [t for t in tags if t not in self._df['tags'][p]])
+
     def update_transactions_category(self, col, key, category=str()):
         '''
-        Adds or deletes transactions category
+        Adds or deletes transactions category based on a search.
 
         If 'category' is empty, it will remove the existing category in the 
         transaction.
@@ -217,7 +281,7 @@ class Transactions:
                 lambda s: category if key.lower() in s[col].lower() else s['category'], axis=1)
 
     @staticmethod
-    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=False):
+    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=True):
         '''
         Checkes for matches in the column informed and updates the tags.
 
@@ -239,10 +303,9 @@ class Transactions:
                 text or number the program will search for
             tags : list
                 list of tags to apply to the transaction (default: [])
-            overwrite : bool
+            overwrite : bool, optional, default=True
                 when False, the tags will be added to the existing transaction's
-                tag list; when True, it overwrites with the new values. (defaul
-                False)
+                tag list; when True, it overwrites with the new values.
         '''
 
         if (numeric_col and key == row[column]) or (not numeric_col and key in row[column]):
@@ -255,7 +318,7 @@ class Transactions:
 
     def update_transactions_tags(self, col, key, tags=[], overwrite=True):
         '''
-        Adds, appends, or deletes tags in transactions that match the search
+        Adds, appends, or deletes tags in transactions that match the search.
 
         If 'overwrite' is True, the new values will overwrite the existing ones,
         it includes replacing the tags with no tags.
