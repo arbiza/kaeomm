@@ -1,9 +1,7 @@
 import pandas as pd
 from pandas.api.types import is_string_dtype
 from pandas.api.types import is_numeric_dtype
-from datetime import datetime
 
-from transactions import Transactions
 from config import Config
 
 
@@ -14,7 +12,7 @@ class StatementException(Exception):
 class StatementsParser:
 
     def __init__(self, statement_path: str, timezone: str) -> None:
-        self._df = pd.DataFrame(columns=Transactions.headers())
+        self._df = pd.DataFrame(columns=Config.headers())
         self._stmt = pd.read_csv(statement_path)
         self._timezone = timezone
 
@@ -29,9 +27,6 @@ class StatementsParser:
 
     def get_stmt_columns(self) -> list:
         return self._stmt.columns.values.tolist()
-
-    def get_df_columns(self) -> list:
-        return Transactions.headers()
 
     def import_column(self, src_stmt_col: list, dst_df_col: str) -> None:
 

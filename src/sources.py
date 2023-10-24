@@ -6,7 +6,6 @@ import tzlocal
 
 from config import Config
 from statements import StatementsParser
-from transactions import Transactions
 import utils
 
 
@@ -46,6 +45,14 @@ class Source:
         raise SourcesException('"name" can\'t be directly modified YET.')
 
     @property
+    def currency(self):
+        return self._currency
+
+    @currency.setter
+    def currency(self, value):
+        raise SourcesException('"currency" can\'t be changed.')
+
+    @property
     def id(self):
         return self._id
 
@@ -54,7 +61,7 @@ class Source:
         raise SourcesException('"id" can\'t be directly modified.')
 
     def add_stmt_column_mapping(self, src_col: list, dst_col: str) -> None:
-        if dst_col not in Transactions.headers():
+        if dst_col not in Config.headers():
             raise SourcesException(
                 "The Transactions DataFrame has no column named '{}'\n".format(
                     dst_col
@@ -71,7 +78,8 @@ class Source:
             })
 
     def statement_parse(self, stmt_path: str) -> pandas.DataFrame:
-        parser = StatementsParser(stmt_path, self._stmt_timezone)
+        parser = StatementsParser(
+            stmt_path, self._stmt_timezone, Config.headers())
 
         # Proceeds only if at least one column mapping has been set
         if len(self._stmt_columns_mapping) == 0:

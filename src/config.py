@@ -91,6 +91,24 @@ class Config:
     def del_tag(self, tag: str) -> None:
         self._tags.remove(tag)
 
+    @staticmethod
+    def headers() -> list:
+        '''Returns the transactions DataFrame headers list'''
+        return ['time',
+                'type',
+                'source',
+                'source_id',
+                'desc',
+                'amount',
+                'fee',
+                'total',
+                'curr',
+                'note',
+                'system_cat',
+                'category',
+                'tags'
+                ]
+
     def save(self) -> bool:
         config = {
             "default_currency": self.default_currency,

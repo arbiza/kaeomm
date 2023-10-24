@@ -3,6 +3,7 @@ from pandas.api.types import is_numeric_dtype
 import re
 
 from config import Config
+from sources import Sources, Source
 import utils
 
 
@@ -18,12 +19,12 @@ class Transactions:
     DataFrame. The dataframe is ordered by date/time.
     '''
 
-    def __new__(cls, cfg: Config):
+    def __new__(cls, cfg, sources):
         if not hasattr(cls, 'instance'):
             cls.instance = super(Transactions, cls).__new__(cls)
         return cls.instance
 
-    def __init__(self, cfg: Config) -> None:
+    def __init__(self, cfg, sources):
         '''
         Loads the transactions database into a Pandas DataFrame, if the database
         exists. If not, it creates an empty DF with the set of columns defined in
@@ -36,11 +37,14 @@ class Transactions:
         # important to keep the path to the files always actual.
         self._cfg = cfg
 
+        # 'Sources' is a Singleton class too.
+        self._sources = sources
+
         try:
             self._df = pd.read_csv(
                 self._cfg.db_dir + 'transactions.csv', sep='|')
 
-            if self._df.columns.values.tolist() != self.headers():
+            if self._df.columns.values.tolist() != Config.headers():
                 raise TransactionsException(
                     "Exception: Transactions DB is corrupted. \n"
                     "\n"
@@ -49,11 +53,11 @@ class Transactions:
                     "\n"
                     "  Existing headers:\n"
                     "  {}\n"
-                    "\n".format(self.headers(),
+                    "\n".format(Config.headers(),
                                 self._df.columns.values.tolist()))
 
         except FileNotFoundError:
-            self._df = pd.DataFrame(columns=self.headers())
+            self._df = pd.DataFrame(columns=Config.headers())
 
         except TransactionsException as e:
             print(str(e))
@@ -85,6 +89,90 @@ class Transactions:
                         utils.datetime_for_filename() + '.csv',
                         sep='|',
                         index=False)
+
+    def extend(self, i, source, amount, fee, note, category=None, tags=None):
+        '''
+        Adds an additional transaction with some of the values from the original
+        one (at index 'i'). More entries will represent one transaction and the
+        sum of them will represent the real amount expend or received.
+
+        It's useful, for example, to register a tip at a restaurant; this 
+        transaction will have the same date/time and description, but may have 
+        all other values different.
+
+        Other examples:
+          - salary discounts
+          - partial refunds with different sources
+          - 
+
+
+        Parameters
+        ----------
+        i : int
+            index of the transaction to be extended
+        source : str
+            source name (from the Source class)
+        amount : float
+            expense amount (< 0) or income amount (> 0)
+        fee : float
+            fee amount
+        note : str
+            a note, if wanted
+        category : str, optional, default=None
+            category for the extended transaction. If omitted, it will have the 
+            same as the original transaction; if '', it will be empty
+        tags : list, optional, default=None
+            list with tags for the extended to the transaction. If omitted, it will have the 
+            same as the original transaction; if [], it will be empty
+
+        Returns
+        -------
+        Pandas DataFrame
+        '''
+
+        ext_source = None
+
+        for s in self._sources.sources:
+            if source.lower() == s.name.lower():
+                ext_source = s
+
+        if ext_source is None:
+            raise TransactionsException(
+                'There is no source named "{}".\n'.format(source),
+                'Please, register this source first.')
+
+        category = self._df.loc[i]['category'] if category is None else self._cfg.add_new_category(
+            category)
+
+        if tags is None:
+            tags = self._df.loc[i]['tags']
+        elif isinstance(tags, list):
+            tags = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
+        else:
+            raise TransactionsException(
+                'Tags has to be a list or omitted (None)\n',
+                'The object receives is of type "{}"'.format(tags))
+
+        self.add_bulk(
+            [pd.DataFrame(
+                [[
+                    self._df.loc[i]['time'],
+                    'extend',
+                    ext_source.name,
+                    ext_source.id,
+                    self._df.loc[i]['desc'],
+                    float(amount),
+                    float(fee),
+                    float(amount + fee),
+                    ext_source.currency,
+                    note,
+                    '',
+                    category,
+                    tags
+                ]],
+                columns=Config.headers()
+            )
+            ])
 
     def get_transactions_on_date(self, start, end=None):
         '''
@@ -140,24 +228,6 @@ class Transactions:
     def get_transactions_without_tags(self) -> pd.DataFrame:
         return self._df.loc[self._df['tags'].isna()]
 
-    @staticmethod
-    def headers() -> list:
-        '''Returns the Transactions DataFrame headers'''
-        return ['time',
-                'type',
-                'source',
-                'source_id',
-                'desc',
-                'amount',
-                'fee',
-                'total',
-                'curr',
-                'note',
-                'system_cat',
-                'category',
-                'tags'
-                ]
-
     def print_to_cli(self, columns: list = [], n_rows: int = 10) -> None:
         '''
         Print the number of rows in Transactions DataFrame defined in n_rows
@@ -175,7 +245,7 @@ class Transactions:
         Backup the current database, then clean it up.
         '''
         self.backup()
-        self._df = pd.DataFrame(columns=self.headers())
+        self._df = pd.DataFrame(columns=Config.headers())
 
     def save(self) -> None:
         self._df.to_csv(self._cfg.db_dir + 'transactions.csv',
