@@ -90,6 +90,130 @@ class Transactions:
                         sep='|',
                         index=False)
 
+    def decompose(self, i: int, amount: float, fee: float, note: str,
+                  category: str = None, tags: list = None) -> None:
+        '''
+        Adds an additional transaction with some of the values from the original
+        one (at index 'i'). More entries will represent one transaction, but 
+        total amount will be split among them.
+
+        It's useful, for example, to decompose a supermarket transaction into 
+        different categories (food, alcohol, cleaning), or to separate the 
+        amount and the fee with different categories or tags.
+
+
+        Parameters
+        ----------
+        i : int
+            index of the transaction to be extended
+        amount : float
+            expense amount - it has to be smaller or equal to original amount
+        fee : float
+            fee amount - it has to be smaller or equal to original amount
+        note : str
+            a note, if wanted
+        category : str, optional, default=None
+            category for the extended transaction. If omitted, it will have the 
+            same as the original transaction; if '', it will be empty
+        tags : list, optional, default=None
+            list with tags for the extended to the transaction. If omitted, it 
+            will have the same as the original transaction; if [], it will be 
+            empty
+
+        Returns
+        -------
+        None
+        '''
+
+        # There are several restrictions for this operation. Since it decompose
+        # a transaction, the amounts have to mean fit into the combined amount
+        # and can't be both zero.
+        if amount == 0 and fee == 0:
+            raise TransactionsException(
+                '"amount" and "fee" can\'t both be zero')
+
+        # If it's an expense
+        if amount != 0 and self._df.loc[i]['total'] < 0:
+
+            if amount > 0:
+                amount *= -1
+            if fee > 0:
+                fee *= -1
+
+            # Amount + fee can't exceed the total
+            if (amount + fee) < self._df.loc[i]['total']:
+                raise TransactionsException(
+                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
+                        self._df.loc[i]['total'])
+                )
+
+            # Amount and fee have to be smaller than the original values
+            if amount < self._df.loc[i]['amount'] or fee < self._df.loc[i]['fee']:
+                raise TransactionsException(
+                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
+                        self._df.loc[i]['amount'], self._df.loc[i]['fee'])
+                )
+
+        # If it's an income
+        elif fee != 0 and self._df.loc[i]['total'] > 0:
+            if amount < 0:
+                amount *= -1
+            if fee < 0:
+                fee *= -1
+
+            # Amount + fee can't exceed the total
+            if (amount + fee) > self._df.loc[i]['total']:
+                raise TransactionsException(
+                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
+                        self._df.loc[i]['total'])
+                )
+
+            # Amount and fee have to be smaller than the original values
+            if amount > self._df.loc[i]['amount'] or fee > self._df.loc[i]['fee']:
+                raise TransactionsException(
+                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
+                        self._df.loc[i]['amount'], self._df.loc[i]['fee']))
+
+        category = self._df.loc[i]['category'] if category is None else self._cfg.add_new_category(
+            category)
+
+        if tags is None:
+            tags = self._df.loc[i]['tags']
+        elif isinstance(tags, list):
+            tags = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
+        else:
+            raise TransactionsException(
+                'Tags has to be a list or omitted (None)\n',
+                'The object receives is of type "{}"'.format(tags))
+
+        # Update the original transaction
+        self._df.loc[i, 'amount'] = self._df.loc[i]['amount'] - float(amount)
+        self._df.loc[i, 'fee'] = self._df.loc[i]['fee'] - fee
+        self._df.loc[i, 'total'] = self._df.loc[i]['amount'] + \
+            self._df.loc[i]['fee']
+
+        # Add the new transaction
+        self.add_bulk(
+            [pd.DataFrame(
+                [[
+                    self._df.loc[i]['time'],
+                    'decompose',
+                    self._df.loc[i]['source'],
+                    self._df.loc[i]['source_id'],
+                    self._df.loc[i]['desc'],
+                    float(amount),
+                    float(fee),
+                    float(amount + fee),
+                    self._df.loc[i]['curr'],
+                    note,
+                    '',
+                    category,
+                    tags
+                ]],
+                columns=Config.headers()
+            )
+            ])
+
     def extend(self, i, source, amount, fee, note, category=None, tags=None):
         '''
         Adds an additional transaction with some of the values from the original
@@ -122,12 +246,13 @@ class Transactions:
             category for the extended transaction. If omitted, it will have the 
             same as the original transaction; if '', it will be empty
         tags : list, optional, default=None
-            list with tags for the extended to the transaction. If omitted, it will have the 
-            same as the original transaction; if [], it will be empty
+            list with tags for the extended to the transaction. If omitted, it 
+            will have the same as the original transaction; if [], it will be 
+            empty
 
         Returns
         -------
-        Pandas DataFrame
+        None
         '''
 
         ext_source = None
