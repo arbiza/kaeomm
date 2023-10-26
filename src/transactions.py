@@ -553,7 +553,7 @@ class Transactions:
                 tag list; when True, it overwrites with the new values.
         '''
 
-        if (numeric_col and key == row[column]) or (not numeric_col and key in row[column]):
+        if (numeric_col and key == row[column]) or (not numeric_col and key.lower() in row[column].lower()):
             if overwrite is True or pd.isna(row['tags']):
                 return ','.join(tags)
             else:
