@@ -1,6 +1,7 @@
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import re
+from numbers import Number
 
 from config import Config
 from sources import Sources, Source
@@ -214,6 +215,32 @@ class Transactions:
             )
             ])
 
+    def df_info(self) -> str:
+
+        # return (
+        #     "This is\n"
+        #     "THE BEST\n"
+        #     "I've found!\n"
+        #     "    and the empty spaces\n"
+        #     "  remain.\n"
+        #     "\n"
+        #     "\tthis is with tab\n"
+        #     "{}").format('-' * 30)
+
+        return (
+            "TRANSACTIONS DF DETAILS\n\n"
+            "DTYPES\n\n\n"
+            f"{self._df.dtypes}"
+            "\n\n\nDESCRIBE\n"
+            f"{self._df.describe()}"
+        )
+
+        output = 'TRANSACTIONS DF DETAILS\n\n'
+        output += 'DTYPES\n\n'
+        output += '\n'.join([str(r) for r in self._df.dtypes])
+        output += '\n\n\nDESCRIBE\n\n'
+        # output += self._df.describe().to_string
+
     def extend(self, i, source, amount, fee, note, category=None, tags=None):
         '''
         Adds an additional transaction with some of the values from the original
@@ -380,7 +407,8 @@ class Transactions:
         self._df.sort_values(by=['time'], inplace=True)
         self._df.reset_index(inplace=True, drop=True)
 
-    def _system_category(self, i=[], col=None, key=None, system_category=str()):
+    def _system_category(self, i: list = [], col: str = None,
+                         key: any = None, system_category: str = '') -> None:
         '''
         Adds or deletes system_cat to transactions based on a search or at a 
         specific index. It's meant to be used by the class only.
@@ -415,16 +443,15 @@ class Transactions:
             raise TransactionsException(
                 'There is no system category named as \'{}\' and it can\'t be defined'.format(system_category))
 
+        # Set the system category at specified index
         if len(i) > 0:
             self._df['system_cat'][i] = system_category
 
+        # Set the system category when the search for 'key' matches in 'col'
         elif col is not None and key is not None:
-            if is_numeric_dtype(self._df[col].dtype):
-                self._df['system_cat'] = self._df.apply(
-                    lambda s: system_category if key == s[col] else s['system_cat'], axis=1)
-            else:
-                self._df['system_cat'] = self._df.apply(
-                    lambda s: system_category if key.lower() in s[col].lower() else s['system_cat'], axis=1)
+            self._df['system_cat'] = self._df.apply(
+                self._column_update, args=[col, key, 'system_cat', system_category], axis=1)
+
         else:
             raise TransactionsException(
                 'Either \'i\' must be set or \'col\' and \'key\'.\n'
@@ -524,6 +551,23 @@ class Transactions:
         else:
             self._df['category'] = self._df.apply(
                 lambda s: category if key.lower() in s[col].lower() else s['category'], axis=1)
+
+    @staticmethod
+    def _column_update(row: pd.Series, search_col: str, key: any, target_col: str,
+                       value: any = None, overwrite: bool = True) -> any:
+
+        if pd.isna(row[search_col]):
+            return row[target_col]
+
+        if ((isinstance(row[search_col], Number) and key == row[search_col]) or
+                (not isinstance(row[search_col], Number) and key in row[search_col])):
+            if overwrite or pd.isna(row[target_col]):
+                return ','.join(value) if isinstance(value, list) else value
+            else:
+                # Currently, the only column with list-like values is 'tags'.
+                # If it's a list, it will combine the lists into a comma-separated
+                # string and return, otherwise returns 'value' as it is.
+                return ','.join(value + row[target_col].split(',')) if isinstance(value, list) else value
 
     @staticmethod
     def _update_tags(row, column, numeric_col, key, tags=[], overwrite=True):
