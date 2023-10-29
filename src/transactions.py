@@ -1,7 +1,6 @@
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import re
-from numbers import Number
 
 from config import Config
 from sources import Sources, Source
@@ -90,6 +89,26 @@ class Transactions:
                         utils.datetime_for_filename() + '.csv',
                         sep='|',
                         index=False)
+
+    @staticmethod
+    def _column_update(row: pd.Series, search_col: str, is_number: bool,
+                       key: any, target_col: str, value: any = None,
+                       overwrite: bool = True) -> any:
+
+        if pd.isna(row[search_col]) or (not is_number and row[search_col] == ''):
+            return row[target_col]
+
+        if ((is_number and key == row[search_col]) or
+                (not is_number and key.lower() in row[search_col].lower())):
+            if overwrite or pd.isna(row[target_col]):
+                return ','.join(value) if isinstance(value, list) else value
+            else:
+                # Currently, the only column with list-like values is 'tags'.
+                # If it's a list, it will combine the lists into a comma-separated
+                # string and return, otherwise returns 'value' as it is.
+                return ','.join(value + row[target_col].split(',')) if isinstance(value, list) else value
+
+        return row[target_col]
 
     def decompose(self, i: int, amount: float, fee: float, note: str,
                   category: str = None, tags: list = None) -> None:
@@ -380,6 +399,13 @@ class Transactions:
     def get_transactions_without_tags(self) -> pd.DataFrame:
         return self._df.loc[self._df['tags'].isna()]
 
+    # def search_transactions(self,
+    #                         category: str=None,
+    #                         tags: list=None,
+
+    #                         ) -> pd.DataFrame:
+        pass
+
     def print_to_cli(self, columns: list = [], n_rows: int = 10) -> None:
         '''
         Print the number of rows in Transactions DataFrame defined in n_rows
@@ -450,7 +476,7 @@ class Transactions:
         # Set the system category when the search for 'key' matches in 'col'
         elif col is not None and key is not None:
             self._df['system_cat'] = self._df.apply(
-                self._column_update, args=[col, key, 'system_cat', system_category], axis=1)
+                self._column_update, args=[col, is_numeric_dtype(self._df[col]), key, 'system_cat', system_category], axis=1)
 
         else:
             raise TransactionsException(
@@ -545,65 +571,8 @@ class Transactions:
 
         category = self._cfg.add_new_category(category)
 
-        if is_numeric_dtype(self._df[col].dtype):
-            self._df['category'] = self._df.apply(
-                lambda s: category if key == s[col] else s['category'], axis=1)
-        else:
-            self._df['category'] = self._df.apply(
-                lambda s: category if key.lower() in s[col].lower() else s['category'], axis=1)
-
-    @staticmethod
-    def _column_update(row: pd.Series, search_col: str, key: any, target_col: str,
-                       value: any = None, overwrite: bool = True) -> any:
-
-        if pd.isna(row[search_col]):
-            return row[target_col]
-
-        if ((isinstance(row[search_col], Number) and key == row[search_col]) or
-                (not isinstance(row[search_col], Number) and key in row[search_col])):
-            if overwrite or pd.isna(row[target_col]):
-                return ','.join(value) if isinstance(value, list) else value
-            else:
-                # Currently, the only column with list-like values is 'tags'.
-                # If it's a list, it will combine the lists into a comma-separated
-                # string and return, otherwise returns 'value' as it is.
-                return ','.join(value + row[target_col].split(',')) if isinstance(value, list) else value
-
-    @staticmethod
-    def _update_tags(row, column, numeric_col, key, tags=[], overwrite=True):
-        '''
-        Checkes for matches in the column informed and updates the tags.
-
-        When the column with the values to be evaluated is numeric, the key has
-        to be the same; when it's a string, it will look for a substring.
-
-        It may overwrite the tags, or append a new one.
-        This is a static method firstly designed to be used as an auxiliary 
-        function for Pandas apply.
-
-        Parameters
-        ----------
-            column : str
-                name of the column where the program will search for the 'key'
-            numeric_col : bool
-                indicates whether the column where the search will be performed
-                is numeric or string.
-            key : str or number
-                text or number the program will search for
-            tags : list
-                list of tags to apply to the transaction (default: [])
-            overwrite : bool, optional, default=True
-                when False, the tags will be added to the existing transaction's
-                tag list; when True, it overwrites with the new values.
-        '''
-
-        if (numeric_col and key == row[column]) or (not numeric_col and key.lower() in row[column].lower()):
-            if overwrite is True or pd.isna(row['tags']):
-                return ','.join(tags)
-            else:
-                return ','.join(row['tags'].split(',') + [t for t in tags if t not in row['tags']])
-        else:
-            return row['tags']
+        self._df['category'] = self._df.apply(
+            self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'category', category], axis=1)
 
     def update_transactions_tags(self, col, key, tags=[], overwrite=True):
         '''
@@ -633,7 +602,12 @@ class Transactions:
             raise TransactionsException(
                 'The method \'update_transactions_tags\' expects \'tags\' as a list, it received a {}'.format(type(tags)))
 
+        if len(tags) == 0 and overwrite is False:
+            raise TransactionsException(
+                '"tags" is empty and overwrite is set "False". With this combination, the method won\'t do anything.'
+            )
+
         tags = [self._cfg.add_new_tag(tag) for tag in tags]
 
-        self._df['tags'] = self._df.apply(self._update_tags, args=(
-            col, is_numeric_dtype(self._df[col].dtype), key, tags, overwrite), axis=1)
+        self._df['tags'] = self._df.apply(
+            self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'tags', tags, overwrite], axis=1)
