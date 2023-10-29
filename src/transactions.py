@@ -19,12 +19,12 @@ class Transactions:
     DataFrame. The dataframe is ordered by date/time.
     '''
 
-    def __new__(cls, cfg, sources):
+    def __new__(cls, cfg: Config, sources: Sources):
         if not hasattr(cls, 'instance'):
             cls.instance = super(Transactions, cls).__new__(cls)
         return cls.instance
 
-    def __init__(self, cfg, sources):
+    def __init__(self, cfg: Config, sources: Sources) -> None:
         '''
         Loads the transactions database into a Pandas DataFrame, if the database
         exists. If not, it creates an empty DF with the set of columns defined in
@@ -236,16 +236,6 @@ class Transactions:
 
     def df_info(self) -> str:
 
-        # return (
-        #     "This is\n"
-        #     "THE BEST\n"
-        #     "I've found!\n"
-        #     "    and the empty spaces\n"
-        #     "  remain.\n"
-        #     "\n"
-        #     "\tthis is with tab\n"
-        #     "{}").format('-' * 30)
-
         return (
             "TRANSACTIONS DF DETAILS\n\n"
             "DTYPES\n\n\n"
@@ -253,12 +243,6 @@ class Transactions:
             "\n\n\nDESCRIBE\n"
             f"{self._df.describe()}"
         )
-
-        output = 'TRANSACTIONS DF DETAILS\n\n'
-        output += 'DTYPES\n\n'
-        output += '\n'.join([str(r) for r in self._df.dtypes])
-        output += '\n\n\nDESCRIBE\n\n'
-        # output += self._df.describe().to_string
 
     def extend(self, i, source, amount, fee, note, category=None, tags=None):
         '''
@@ -345,67 +329,6 @@ class Transactions:
             )
             ])
 
-    def get_transactions_on_date(self, start, end=None):
-        '''
-        Returns the transactions realized on a date or between dates.
-
-        If the end date is not provided, it will return the transaction on a 
-        single day. Otherwise it returns the dates from 'start' to 'end'
-
-        Parameters
-        ----------
-        start : str
-            start date in ISO format (yyyy-mm-dd)
-        end : str, optional
-            end date in ISO format (yyyy-mm-dd)
-
-        Returns
-        -------
-        Pandas DataFrame
-        '''
-
-        pattern = '^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
-
-        if not re.search(pattern, start):
-            raise TransactionsException(
-                'The dates must be passed as yyyy-mm-dd; {} doesn\'t match or is not a valid date.'.format(start))
-
-        if end is not None and not re.search(pattern, end):
-            raise TransactionsException(
-                'The dates must be passed as yyyy-mm-dd; {} doesn\'t match or is not a valid date.'.format(end))
-
-        if end is None:
-            return self._df[(self._df['time'].dt.strftime('%Y-%m-%d') == start)]
-        else:
-            return self._df[(self._df['time'].dt.strftime('%Y-%m-%d') >= start) & (self._df['time'].dt.strftime('%Y-%m-%d') <= end)]
-
-    def get_transactions_with_amount(self, amount) -> pd.DataFrame:
-        return self._df.loc[self._df['amount'] == amount]
-
-    def get_transactions_with_category(self, category) -> pd.DataFrame:
-        tmp = self._df.loc[~self._df['category'].isna()]
-        return tmp.loc[tmp['category'] == category]
-
-    def get_transactions_without_category(self) -> pd.DataFrame:
-        return self._df.loc[self._df['category'].isna()]
-
-    def get_transactions_with_description(self, description) -> pd.DataFrame:
-        return self._df.loc[self._df['desc'].str.contains(description, case=False)]
-
-    def get_transactions_with_tag(self, tag) -> pd.DataFrame:
-        tmp = self._df.loc[~self._df['tags'].isna()]
-        return tmp.loc[tmp['tags'].str.contains(tag, case=False)]
-
-    def get_transactions_without_tags(self) -> pd.DataFrame:
-        return self._df.loc[self._df['tags'].isna()]
-
-    # def search_transactions(self,
-    #                         category: str=None,
-    #                         tags: list=None,
-
-    #                         ) -> pd.DataFrame:
-        pass
-
     def print_to_cli(self, columns: list = [], n_rows: int = 10) -> None:
         '''
         Print the number of rows in Transactions DataFrame defined in n_rows
@@ -428,6 +351,204 @@ class Transactions:
     def save(self) -> None:
         self._df.to_csv(self._cfg.db_dir + 'transactions.csv',
                         sep='|', index=False)
+
+    def search(self,
+               index: int or list = None,
+               start_date: str = None,
+               end_date: str = None,
+               type: str = None,
+               source: str = None,
+               description: str = None,
+               total: float = None,
+               currency: str = None,
+               note: str = None,
+               system_category: str = None,
+               categories: str or list(str) = None,
+               tags: str or list(str) or int = None) -> pd.DataFrame:
+        '''
+        Searchs for transaction which combine all the arguments passed.
+
+        Set the arguments you want to look for. 
+
+        Parameters
+        ----------
+        index : int or list
+            when "int": returns the row at the specified index
+            when "list": returns the rows at the indexes in the list
+            for a specific range, use index=list(range(<start>, <end+1>))
+        start_date: str
+            date in the format "yyyy-mm-dd"
+        end_date: str
+            date in the format "yyyy-mm-dd"; when omitted, the program returns
+            the rows with the date in "start_date"
+        type: str
+            returns rows with the exact values passed in "type"
+        source: str
+            returns the transactions of the specified source
+        description: str
+            returns the transactions where the "desc" column contains the value
+            passed in "description"
+        total: float
+            returns the transactions where the "total" is equal to the value 
+            passed
+        currency: str
+            returns the transactions in the currency specified
+        note: str
+            returns the transactions where the "note" column contains the value
+            passed in "note"
+        system_category: str
+            returns the transactions with the "system_category" specified
+        categories: str or list(str)
+            when "str" with some value, return the transactions with the category
+            when "str" but '': returns, return transactions without category
+            when "list", returns the transactions with the listed categories
+        tags: str or list(str) or int
+            when "str" with some value, return the transactions with the tag
+            when "str" but '': returns, return transactions without tags
+            when "list", returns the transactions with the listed tags
+            when "int", returns the transactions with the number of tags specified
+                (has to be > 0). For no tags, use an empty string ('')
+
+        Returns
+        -------
+        Pandas Dataframe (None when the method was called with all arguments as None)
+        '''
+
+        s_df = self._df
+
+        # INDEX
+        if index is not None:
+            if isinstance(index, int):
+                s_df = s_df.loc[[index]]
+            elif isinstance(index, list):
+                s_df = s_df.loc[index]
+            else:
+                raise TransactionsException(
+                    '"index" has to be an integer or a list of integers; received "{}"'.format(index))
+
+        # DATE
+        pattern = '^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
+
+        if start_date is not None and not re.search(pattern, start_date):
+            raise TransactionsException(
+                'The dates must be passed as yyyy-mm-dd; {} doesn\'t match or is not a valid date.'.format(start_date))
+
+        if end_date is not None and not re.search(pattern, end_date):
+            raise TransactionsException(
+                'The dates must be passed as yyyy-mm-dd; {} doesn\'t match or is not a valid date.'.format(end_date))
+
+        if start_date is not None and end_date is None:
+            s_df = s_df[(s_df['time'].dt.strftime('%Y-%m-%d') == start_date)]
+        elif start_date is not None and end_date is not None:
+            s_df = s_df[(s_df['time'].dt.strftime(
+                '%Y-%m-%d') >= start_date) & (s_df['time'].dt.strftime('%Y-%m-%d') <= end_date)]
+
+        # TYPE
+        if type is not None:
+            s_df = s_df[(s_df['type'] == type)]
+
+        # SOURCE
+        if source is not None:
+            src = None
+            for s in self._sources.sources:
+                if s.name.lower() == source.lower():
+                    src = s.id
+
+            if src is None:
+                raise TransactionsException(
+                    'There is no "source" named {}.'.format(source))
+
+            s_df = s_df[(s_df['source_id'] == src)]
+
+        # DESCRIPTION
+        if description is not None:
+            description = str(description)
+            s_df.dropna(subset=['desc'], inplace=True)
+            s_df = s_df.loc[s_df['desc'].str.contains(description, case=False)]
+
+        # TOTAL
+        if total is not None:
+            s_df = s_df.loc[s_df['total'] == total]
+
+        # CURRENCY
+        if currency is not None:
+            s_df = s_df[(s_df['curr'] == currency)]
+
+        # NOTE
+        if note is not None:
+            note = str(note)
+            s_df = s_df.loc[s_df['note'].str.contains(note, case=False)]
+
+        # SYSTEM CATEGORY
+        if system_category is not None:
+            s_df = s_df[(s_df['system_cat'] == system_category)]
+
+        # CATEGORY
+        if categories is not None:
+            if isinstance(categories, str):
+                if categories != '':
+                    if categories.lower().capitalize() not in self._cfg.categories:
+                        raise TransactionsException(
+                            'There is no category named "{}"'.format(categories))
+                    else:
+                        s_df.dropna(subset=['category'], inplace=True)
+                        s_df = s_df[s_df['category'] ==
+                                    categories.lower().capitalize()]
+                else:
+                    s_df = s_df[s_df['category'].isna()]
+
+            elif isinstance(categories, list):
+                s_df.dropna(subset=['category'], inplace=True)
+
+                for cat in categories:
+                    if cat.lower().capitalize() not in self._cfg.categories:
+                        raise TransactionsException(
+                            'There is no category named "{}"'.format(cat))
+
+                findings = [s_df.loc[s_df['category'].str.contains(
+                    cat, case=False)] for cat in categories]
+
+                s_df = pd.concat(findings)
+            else:
+                raise TransactionsException(
+                    '"categoris" has to be a list of strings or a single string (may be empty); received "{}"'.format(categories))
+
+        # TAGS
+        if tags is not None:
+
+            # Searching for tags in a list
+            if isinstance(tags, list):
+                s_df.dropna(subset=['tags'], inplace=True)
+
+                for tag in tags:
+                    if tag.lower().capitalize() not in self._cfg.tags:
+                        raise TransactionsException(
+                            'There is no tag named "{}"'.format(tag))
+
+                findings = [s_df.loc[s_df['tags'].str.contains(
+                    t, case=False)] for t in tags]
+
+                s_df = pd.concat(findings)
+
+            # Searching for a single tag
+            elif isinstance(tags, str) and tags != '':
+                s_df.dropna(subset=['tags'], inplace=True)
+                s_df = s_df.loc[s_df['tags'].str.contains(tags, case=False)]
+
+            # Searching for transactions not tagged
+            elif isinstance(tags, str) and tags == '':
+                s_df = s_df.loc[s_df['tags'].isna()]
+
+            # Searching for transactions with a specific number of tags
+            elif isinstance(tags, int) and tags > 0:
+                s_df.dropna(subset=['tags'], inplace=True)
+                s_df = s_df.loc[s_df['tags'].str.count(',') == tags - 1]
+
+            else:
+                raise TransactionsException(
+                    '"tags" has to be a list of strings, a single string, or a positive integer; received "{}"'.format(tags))
+
+        return s_df if s_df is not self._df else None
 
     def _sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)
