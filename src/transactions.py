@@ -382,12 +382,13 @@ class Transactions:
             date in the format "yyyy-mm-dd"; when omitted, the program returns
             the rows with the date in "start_date"
         type: str
-            returns rows with the exact values passed in "type"
+            returns rows with the exact values passed in "type". '*' returns any
+            type
         source: str
             returns the transactions of the specified source
         description: str
             returns the transactions where the "desc" column contains the value
-            passed in "description"
+            passed in "description". '*' returns any description
         total: float
             returns the transactions where the "total" is equal to the value 
             passed
@@ -395,16 +396,19 @@ class Transactions:
             returns the transactions in the currency specified
         note: str
             returns the transactions where the "note" column contains the value
-            passed in "note"
+            passed in "note". '*' returns any note
         system_category: str
-            returns the transactions with the "system_category" specified
+            returns the transactions with the "system_category" specified.
+            '*' returns any category
         categories: str or list(str)
             when "str" with some value, return the transactions with the category
-            when "str" but '': returns, return transactions without category
+            when '': returns transactions without category
+            when '*': returns transaction with any category set
             when "list", returns the transactions with the listed categories
         tags: str or list(str) or int
             when "str" with some value, return the transactions with the tag
-            when "str" but '': returns, return transactions without tags
+            when '': returns transactions without tags
+            when '*': returns transaction with any tag set
             when "list", returns the transactions with the listed tags
             when "int", returns the transactions with the number of tags specified
                 (has to be > 0). For no tags, use an empty string ('')
@@ -445,7 +449,10 @@ class Transactions:
 
         # TYPE
         if type is not None:
-            s_df = s_df[(s_df['type'] == type)]
+            if type == '*':
+                s_df = s_df.dropna(subset=['type'])
+            else:
+                s_df = s_df[(s_df['type'] == type)]
 
         # SOURCE
         if source is not None:
@@ -462,9 +469,18 @@ class Transactions:
 
         # DESCRIPTION
         if description is not None:
-            description = str(description)
-            s_df.dropna(subset=['desc'], inplace=True)
-            s_df = s_df.loc[s_df['desc'].str.contains(description, case=False)]
+
+            # Regardless it's "*" or any other string to look for, if "description"
+            # has been set, the process requires removing the empty ones.
+            #
+            # If it's "*", it's enought to drop the NaN;
+            # if not, it will search for the string.
+            s_df = s_df.dropna(subset=['desc'])
+
+            if description != '*':
+                description = str(description)
+                s_df = s_df.loc[s_df['desc'].str.contains(
+                    description, case=False)]
 
         # TOTAL
         if total is not None:
@@ -476,29 +492,48 @@ class Transactions:
 
         # NOTE
         if note is not None:
-            note = str(note)
-            s_df = s_df.loc[s_df['note'].str.contains(note, case=False)]
+
+            # Regardless it's "*" or any other string to look for, if "note"
+            # has been set, the process requires removing the empty ones.
+            #
+            # If it's "*", it's enought to drop the NaN;
+            # if not, it will search for the string.
+            s_df = s_df.dropna(subset=['note'])
+
+            if note != '*':
+                note = str(note)
+                s_df = s_df.loc[s_df['note'].str.contains(note, case=False)]
 
         # SYSTEM CATEGORY
         if system_category is not None:
-            s_df = s_df[(s_df['system_cat'] == system_category)]
+            if system_category == '':
+                s_df = s_df[s_df['system_cat'].isna()]
+            elif system_category == '*':
+                s_df = s_df.dropna(subset=['system_cat'])
+            else:
+                s_df = s_df[(s_df['system_cat'] == system_category)]
 
         # CATEGORY
         if categories is not None:
+
+            s_df = s_df.dropna(subset=['category'])
+
             if isinstance(categories, str):
                 if categories != '':
-                    if categories.lower().capitalize() not in self._cfg.categories:
+                    if categories == '*':
+                        # If categories is '*', there is nothing else to do since
+                        # the empty ones have already been removed.
+                        pass
+                    elif categories.lower().capitalize() not in self._cfg.categories:
                         raise TransactionsException(
                             'There is no category named "{}"'.format(categories))
                     else:
-                        s_df.dropna(subset=['category'], inplace=True)
                         s_df = s_df[s_df['category'] ==
                                     categories.lower().capitalize()]
                 else:
                     s_df = s_df[s_df['category'].isna()]
 
             elif isinstance(categories, list):
-                s_df.dropna(subset=['category'], inplace=True)
 
                 for cat in categories:
                     if cat.lower().capitalize() not in self._cfg.categories:
@@ -516,14 +551,17 @@ class Transactions:
         # TAGS
         if tags is not None:
 
+            s_df = s_df.dropna(subset=['tags'])
+
             # Searching for tags in a list
             if isinstance(tags, list):
-                s_df.dropna(subset=['tags'], inplace=True)
 
                 for tag in tags:
                     if tag.lower().capitalize() not in self._cfg.tags:
                         raise TransactionsException(
                             'There is no tag named "{}"'.format(tag))
+
+                print(tags)
 
                 findings = [s_df.loc[s_df['tags'].str.contains(
                     t, case=False)] for t in tags]
@@ -531,17 +569,19 @@ class Transactions:
                 s_df = pd.concat(findings)
 
             # Searching for a single tag
-            elif isinstance(tags, str) and tags != '':
-                s_df.dropna(subset=['tags'], inplace=True)
-                s_df = s_df.loc[s_df['tags'].str.contains(tags, case=False)]
-
-            # Searching for transactions not tagged
-            elif isinstance(tags, str) and tags == '':
-                s_df = s_df.loc[s_df['tags'].isna()]
+            elif isinstance(tags, str):
+                if tags == '*':
+                    # If tags is '*', there is nothing else to do since
+                    # the empty ones have already been removed.
+                    pass
+                elif tags == '':
+                    s_df = s_df.loc[s_df['tags'].isna()]
+                else:
+                    s_df = s_df.loc[s_df['tags'].str.contains(
+                        tags, case=False)]
 
             # Searching for transactions with a specific number of tags
             elif isinstance(tags, int) and tags > 0:
-                s_df.dropna(subset=['tags'], inplace=True)
                 s_df = s_df.loc[s_df['tags'].str.count(',') == tags - 1]
 
             else:
