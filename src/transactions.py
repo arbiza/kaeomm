@@ -90,25 +90,25 @@ class Transactions:
                         sep='|',
                         index=False)
 
-    @staticmethod
-    def _column_update(row: pd.Series, search_col: str, is_number: bool,
-                       key: any, target_col: str, value: any = None,
-                       overwrite: bool = True) -> any:
+    # @staticmethod
+    # def _column_update(row: pd.Series, search_col: str, is_number: bool,
+    #                    key: any, target_col: str, value: any = None,
+    #                    overwrite: bool = True) -> any:
 
-        if pd.isna(row[search_col]) or (not is_number and row[search_col] == ''):
-            return row[target_col]
+    #     if pd.isna(row[search_col]) or (not is_number and row[search_col] == ''):
+    #         return row[target_col]
 
-        if ((is_number and key == row[search_col]) or
-                (not is_number and key.lower() in row[search_col].lower())):
-            if overwrite or pd.isna(row[target_col]):
-                return ','.join(value) if isinstance(value, list) else value
-            else:
-                # Currently, the only column with list-like values is 'tags'.
-                # If it's a list, it will combine the lists into a comma-separated
-                # string and return, otherwise returns 'value' as it is.
-                return ','.join(value + row[target_col].split(',')) if isinstance(value, list) else value
+    #     if ((is_number and key == row[search_col]) or
+    #             (not is_number and key.lower() in row[search_col].lower())):
+    #         if overwrite or pd.isna(row[target_col]):
+    #             return ','.join(value) if isinstance(value, list) else value
+    #         else:
+    #             # Currently, the only column with list-like values is 'tags'.
+    #             # If it's a list, it will combine the lists into a comma-separated
+    #             # string and return, otherwise returns 'value' as it is.
+    #             return ','.join(value + row[target_col].split(',')) if isinstance(value, list) else value
 
-        return row[target_col]
+    #     return row[target_col]
 
     def decompose(self, i: int, amount: float, fee: float, note: str,
                   category: str = None, tags: list = None) -> None:
@@ -353,7 +353,7 @@ class Transactions:
                         sep='|', index=False)
 
     def search(self,
-               index: int or list = None,
+               index: int or list(int) = None,
                start_date: str = None,
                end_date: str = None,
                type: str = None,
@@ -650,131 +650,172 @@ class Transactions:
                 'Either \'i\' must be set or \'col\' and \'key\'.\n'
                 'Parameters received are: i: {}, col: {}, key: {}'.format(i, col, key))
 
-    def update_transaction_category_at_index(self, i, category=str()):
-        '''
-        Adds or deletes transactions category based on a search.
+    def update(self, index: int or list(int) = None,
+               search_result: pd.DataFrame = None,
+               description: str = None,
+               amount: float = None,
+               fee: float = None,
+               note: str = None,
+               category: str = None,
+               tags: list = None,
+               overwrite_tags: bool = True) -> None:
 
-        If 'category' is empty, it will remove the existing category in the 
-        transaction.
-
-        Parameters
-        ----------
-        i : list
-            list of indexes of the rows to be modified
-        category : str, optional, default=''
-            category to be added to the transaction. When empty, the existing 
-            one will be removed.
-
-        Returns
-        -------
-        None
-        '''
-
-        if not isinstance(i, list):
+        if index is None and search_result is None:
             raise TransactionsException(
-                'The method \'update_transaction_category_at_index\' expects \'i\' as a list, it received a {}'.format(type(i)))
-
-        category = self._cfg.add_new_category(category)
-
-        self._df['category'][i] = category
-
-    def update_transaction_tags_at_index(self, i, tags=[], overwrite=True):
-        '''
-        Adds or deletes transactions category based on a search.
-
-        If 'category' is empty, it will remove the existing category in the 
-        transaction.
-
-        Parameters
-        ----------
-        i : list
-            list of indexes of the rows to be modified
-        tags : list, optional, default=[]
-            list with categories to be added to the transaction. If empty and
-            overwrite is True, the existing tags will be removed.
-        overwrite : book, optional, default=True
-            when False, the tags will be added to the existing transaction's
-            tag list; when True, it overwrites with the new values.
-
-        Returns
-        -------
-        None
-        '''
-
-        if not isinstance(i, list) or not isinstance(tags, list):
+                '"index" or "search_result" must be set. Both cannot be empty.'
+            )
+        elif index is not None and search_result is not None:
             raise TransactionsException(
-                'The method \'update_transaction_tags_at_index\' expects two lists, it received {} and {}'.format(type(i), type(tags)))
-
-        tags = [self._cfg.add_new_tag(tag) for tag in tags]
-
-        for p in i:
-            if overwrite or pd.isna(self._df['tags'][p]):
-                self._df['tags'][p] = ','.join(tags)
-            else:
-                self._df['tags'][p] = ','.join(self._df['tags'][p].split(
-                    ',') + [t for t in tags if t not in self._df['tags'][p]])
-
-    def update_transactions_category(self, col, key, category=str()):
-        '''
-        Adds or deletes transactions category based on a search.
-
-        If 'category' is empty, it will remove the existing category in the 
-        transaction.
-
-        Parameters
-        ----------
-        col : str
-            name of the column to perform the search
-        key : any
-            value the code will search for in the column
-        category : str, optional, default=''
-            category to be added to the transaction. When empty, the existing 
-            one will be removed.
-
-        Returns
-        -------
-        None
-        '''
-
-        category = self._cfg.add_new_category(category)
-
-        self._df['category'] = self._df.apply(
-            self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'category', category], axis=1)
-
-    def update_transactions_tags(self, col, key, tags=[], overwrite=True):
-        '''
-        Adds, appends, or deletes tags in transactions that match the search.
-
-        If 'overwrite' is True, the new values will overwrite the existing ones,
-        it includes replacing the tags with no tags.
-
-        Parameters
-        ----------
-        col : str
-            name of the column to perform the search
-        key : any
-            value the code will search for in the column
-        tags : list, optional, default=[]
-            list with new tags. If empty and overwrite is True, the existing tags
-            will be removed
-        overwrite : bool, optional, default=True
-            overwrites the existing tags, when True; appends when False
-
-        Returns
-        -------
-        None
-        '''
-
-        if not isinstance(tags, list):
-            raise TransactionsException(
-                'The method \'update_transactions_tags\' expects \'tags\' as a list, it received a {}'.format(type(tags)))
-
-        if len(tags) == 0 and overwrite is False:
-            raise TransactionsException(
-                '"tags" is empty and overwrite is set "False". With this combination, the method won\'t do anything.'
+                'Set "index" or "search_result". Both cannot be set.'
             )
 
-        tags = [self._cfg.add_new_tag(tag) for tag in tags]
+        # Get the indexes of the rows to update.
+        # When the indexes were provided, the program will make it as a list.
+        # When a search DF was provided, i will receive the indexes
+        if index is not None:
+            if isinstance(index, int) and index > 0:
+                i = [index]
+            elif isinstance(index, list):
+                i = index
+            else:
+                raise TransactionsException(
+                    'The method expects index as an int > 0 or list(int), it received a {}'.format(type(i)))
 
-        self._df['tags'] = self._df.apply(
-            self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'tags', tags, overwrite], axis=1)
+        elif search_result is not None:
+            i = list(search_result.index.values)
+
+        # If the list of indexes is empty, there is nothing to do
+        if len(i) == 0:
+            return
+
+        if description is not None:
+            self._df['desc'][i] = description
+
+        if amount is not None:
+            self._df['amount'][i] = amount
+
+        if fee is not None:
+            self._df['fee'][i] = fee
+
+        if amount is not None or fee is not None:
+            self._df.loc[i, 'total'] = self._df.loc[i]['amount'] + \
+                self._df.loc[i]['fee']
+
+        if note is not None:
+            self._df['note'][i] = note
+
+        if category is not None:
+            category = self._cfg.add_new_category(category)
+            self._df['category'][i] = category
+
+        if tags is not None:
+            tags = [self._cfg.add_new_tag(tag) for tag in tags]
+
+            print('got here - {}'.format(tags))
+
+            self._df['tags'][i] = self._df.loc[i, 'tags'].apply(
+                lambda r:
+                ','.join(tags) if overwrite_tags or pd.isna(r['tags'])
+                else
+                ','.join(r['tags'].split(','))
+                + [t for t in tags if t not in r['tags']]
+            )
+
+    # def update_transaction_tags_at_index(self, i, tags=[], overwrite=True):
+    #     '''
+    #     Adds or deletes transactions category based on a search.
+
+    #     If 'category' is empty, it will remove the existing category in the
+    #     transaction.
+
+    #     Parameters
+    #     ----------
+    #     i : list
+    #         list of indexes of the rows to be modified
+    #     tags : list, optional, default=[]
+    #         list with categories to be added to the transaction. If empty and
+    #         overwrite is True, the existing tags will be removed.
+    #     overwrite : book, optional, default=True
+    #         when False, the tags will be added to the existing transaction's
+    #         tag list; when True, it overwrites with the new values.
+
+    #     Returns
+    #     -------
+    #     None
+    #     '''
+
+    #     if not isinstance(i, list) or not isinstance(tags, list):
+    #         raise TransactionsException(
+    #             'The method \'update_transaction_tags_at_index\' expects two lists, it received {} and {}'.format(type(i), type(tags)))
+
+    #     tags = [self._cfg.add_new_tag(tag) for tag in tags]
+
+    #     for p in i:
+    #         if overwrite or pd.isna(self._df['tags'][p]):
+    #             self._df['tags'][p] = ','.join(tags)
+    #         else:
+    #             self._df['tags'][p] = ','.join(self._df['tags'][p].split(
+    #                 ',') + [t for t in tags if t not in self._df['tags'][p]])
+
+    # def update_transactions_category(self, col, key, category=str()):
+    #     '''
+    #     Adds or deletes transactions category based on a search.
+
+    #     If 'category' is empty, it will remove the existing category in the
+    #     transaction.
+
+    #     Parameters
+    #     ----------
+    #     col : str
+    #         name of the column to perform the search
+    #     key : any
+    #         value the code will search for in the column
+    #     category : str, optional, default=''
+    #         category to be added to the transaction. When empty, the existing
+    #         one will be removed.
+
+    #     Returns
+    #     -------
+    #     None
+    #     '''
+
+    #     self._df['category'] = self._df.apply(
+    #         self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'category', category], axis=1)
+
+    # def update_transactions_tags(self, col, key, tags=[], overwrite=True):
+    #     '''
+    #     Adds, appends, or deletes tags in transactions that match the search.
+
+    #     If 'overwrite' is True, the new values will overwrite the existing ones,
+    #     it includes replacing the tags with no tags.
+
+    #     Parameters
+    #     ----------
+    #     col : str
+    #         name of the column to perform the search
+    #     key : any
+    #         value the code will search for in the column
+    #     tags : list, optional, default=[]
+    #         list with new tags. If empty and overwrite is True, the existing tags
+    #         will be removed
+    #     overwrite : bool, optional, default=True
+    #         overwrites the existing tags, when True; appends when False
+
+    #     Returns
+    #     -------
+    #     None
+    #     '''
+
+    #     if not isinstance(tags, list):
+    #         raise TransactionsException(
+    #             'The method \'update_transactions_tags\' expects \'tags\' as a list, it received a {}'.format(type(tags)))
+
+    #     if len(tags) == 0 and overwrite is False:
+    #         raise TransactionsException(
+    #             '"tags" is empty and overwrite is set "False". With this combination, the method won\'t do anything.'
+    #         )
+
+    #     tags = [self._cfg.add_new_tag(tag) for tag in tags]
+
+    #     self._df['tags'] = self._df.apply(
+    #         self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'tags', tags, overwrite], axis=1)
