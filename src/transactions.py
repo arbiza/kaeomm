@@ -64,6 +64,15 @@ class Transactions:
 
         self._df['time'] = pd.to_datetime(self._df['time'])
 
+        # Check all the categories in the dataframe and update the categories
+        # list.
+        [cfg.add_new_category(str(c))
+         for c in self._df['category'].drop_duplicates()]
+
+        # Check all the tags in the dataframe and update the tags list
+        for line in self._df['tags'].drop_duplicates():
+            [cfg.add_new_tag(str(t)) for t in str(line).split(',')]
+
     @property
     def df(self):
         raise TransactionsException(
@@ -656,6 +665,7 @@ class Transactions:
                amount: float = None,
                fee: float = None,
                note: str = None,
+               system_category: str = None,
                category: str = None,
                tags: list = None,
                overwrite_tags: bool = True) -> None:
@@ -689,31 +699,32 @@ class Transactions:
             return
 
         if description is not None:
-            self._df['desc'][i] = description
+            self._df.loc[i, 'desc'] = description
 
         if amount is not None:
-            self._df['amount'][i] = amount
+            self._df.loc[i, 'amount'] = amount
 
         if fee is not None:
-            self._df['fee'][i] = fee
+            self._df.loc[i, 'fee'] = fee
 
         if amount is not None or fee is not None:
             self._df.loc[i, 'total'] = self._df.loc[i]['amount'] + \
                 self._df.loc[i]['fee']
 
         if note is not None:
-            self._df['note'][i] = note
+            self._df.loc[i, 'note'] = note
+
+        if system_category is not None:
+            self._df.loc[i, 'system_cat'] = system_category
 
         if category is not None:
             category = self._cfg.add_new_category(category)
-            self._df['category'][i] = category
+            self._df.loc[i, 'category'] = category
 
         if tags is not None:
             tags = [self._cfg.add_new_tag(tag) for tag in tags]
 
-            print('got here - {}'.format(tags))
-
-            self._df['tags'][i] = self._df.loc[i, 'tags'].apply(
+            self._df.loc[i, 'tags'] = self._df.loc[i, 'tags'].apply(
                 lambda r:
                 ','.join(tags) if overwrite_tags or pd.isna(r['tags'])
                 else
