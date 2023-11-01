@@ -516,77 +516,83 @@ class Transactions:
         # CATEGORY
         if categories is not None:
 
-            s_df = s_df.dropna(subset=['category'])
+            if isinstance(categories, str) and categories == '':
+                s_df = s_df[s_df['category'].isna()]
+            else:
 
-            if isinstance(categories, str):
-                if categories != '':
+                s_df = s_df.dropna(subset=['category'])
+
+                if isinstance(categories, str):
+
                     if categories == '*':
                         # If categories is '*', there is nothing else to do since
                         # the empty ones have already been removed.
                         pass
-                    elif categories.lower().capitalize() not in self._cfg.categories:
-                        raise TransactionsException(
-                            'There is no category named "{}"'.format(categories))
+
                     else:
-                        s_df = s_df[s_df['category'] ==
-                                    categories.lower().capitalize()]
+                        if categories.lower().capitalize() not in self._cfg.categories:
+                            raise TransactionsException(
+                                'There is no category named "{}"'.format(categories))
+                        else:
+                            s_df = s_df[s_df['category'] ==
+                                        categories.lower().capitalize()]
+
+                elif isinstance(categories, list):
+
+                    for cat in categories:
+                        if cat.lower().capitalize() not in self._cfg.categories:
+                            raise TransactionsException(
+                                'There is no category named "{}"'.format(cat))
+
+                    findings = [s_df.loc[s_df['category'].str.contains(
+                        cat, case=False)] for cat in categories]
+
+                    s_df = pd.concat(findings)
                 else:
-                    s_df = s_df[s_df['category'].isna()]
-
-            elif isinstance(categories, list):
-
-                for cat in categories:
-                    if cat.lower().capitalize() not in self._cfg.categories:
-                        raise TransactionsException(
-                            'There is no category named "{}"'.format(cat))
-
-                findings = [s_df.loc[s_df['category'].str.contains(
-                    cat, case=False)] for cat in categories]
-
-                s_df = pd.concat(findings)
-            else:
-                raise TransactionsException(
-                    '"categoris" has to be a list of strings or a single string (may be empty); received "{}"'.format(categories))
+                    raise TransactionsException(
+                        '"categoris" has to be a list of strings or a single string (may be empty); received "{}"'.format(categories))
 
         # TAGS
         if tags is not None:
 
-            s_df = s_df.dropna(subset=['tags'])
-
-            # Searching for tags in a list
-            if isinstance(tags, list):
-
-                for tag in tags:
-                    if tag.lower().capitalize() not in self._cfg.tags:
-                        raise TransactionsException(
-                            'There is no tag named "{}"'.format(tag))
-
-                print(tags)
-
-                findings = [s_df.loc[s_df['tags'].str.contains(
-                    t, case=False)] for t in tags]
-
-                s_df = pd.concat(findings)
-
-            # Searching for a single tag
-            elif isinstance(tags, str):
-                if tags == '*':
-                    # If tags is '*', there is nothing else to do since
-                    # the empty ones have already been removed.
-                    pass
-                elif tags == '':
-                    s_df = s_df.loc[s_df['tags'].isna()]
-                else:
-                    s_df = s_df.loc[s_df['tags'].str.contains(
-                        tags, case=False)]
-
-            # Searching for transactions with a specific number of tags
-            elif isinstance(tags, int) and tags > 0:
-                s_df = s_df.loc[s_df['tags'].str.count(',') == tags - 1]
+            if isinstance(tags, str) and tags == '':
+                s_df = s_df[s_df['tags'].isna()]
 
             else:
-                raise TransactionsException(
-                    '"tags" has to be a list of strings, a single string, or a positive integer; received "{}"'.format(tags))
+                s_df = s_df.dropna(subset=['tags'])
+
+                # Searching for tags in a list
+                if isinstance(tags, list):
+
+                    for tag in tags:
+                        if tag.lower().capitalize() not in self._cfg.tags:
+                            raise TransactionsException(
+                                'There is no tag named "{}"'.format(tag))
+
+                    print(tags)
+
+                    findings = [s_df.loc[s_df['tags'].str.contains(
+                        t, case=False)] for t in tags]
+
+                    s_df = pd.concat(findings)
+
+                # Searching for a single tag
+                elif isinstance(tags, str):
+                    if tags == '*':
+                        # If tags is '*', there is nothing else to do since
+                        # the empty ones have already been removed.
+                        pass
+                    else:
+                        s_df = s_df.loc[s_df['tags'].str.contains(
+                            tags, case=False)]
+
+                # Searching for transactions with a specific number of tags
+                elif isinstance(tags, int) and tags > 0:
+                    s_df = s_df.loc[s_df['tags'].str.count(',') == tags - 1]
+
+                else:
+                    raise TransactionsException(
+                        '"tags" has to be a list of strings, a single string, or an integer > 0; received "{}"'.format(tags))
 
         return s_df if s_df is not self._df else None
 
