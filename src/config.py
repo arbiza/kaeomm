@@ -85,7 +85,7 @@ class Config:
 
     def add_new_tag(self, tag: str) -> str:
         t = tag.lower().capitalize()
-        if t not in self._tags:
+        if t not in self._tags and t != 'Nan':
             self._tags.append(t)
             self._tags.sort()
         return t
