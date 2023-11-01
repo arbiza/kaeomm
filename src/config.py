@@ -40,7 +40,10 @@ class Config:
         self.db_dir = self._config_db['db_dir']
         self._categories = [i.lower().capitalize()
                             for i in self._config_db['categories']]
+        self._categories.sort()
+
         self._tags = [i.lower().capitalize() for i in self._config_db['tags']]
+        self._tags.sort()
 
         self._system_categories = [
             'cash withdraw',  # cash withdraws are not expenses
@@ -77,12 +80,14 @@ class Config:
         c = category.lower().capitalize()
         if c not in self._categories:
             self._categories.append(c)
+            self._categories.sort()
         return c
 
     def add_new_tag(self, tag: str) -> str:
         t = tag.lower().capitalize()
         if t not in self._tags:
             self._tags.append(t)
+            self._tags.sort()
         return t
 
     def del_category(self, category: str) -> None:
