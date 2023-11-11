@@ -101,6 +101,7 @@ class Config:
     def headers() -> list:
         '''Returns the transactions DataFrame headers list'''
         return ['time',
+                'input',
                 'type',
                 'source',
                 'source_id',

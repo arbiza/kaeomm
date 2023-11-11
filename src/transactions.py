@@ -83,6 +83,18 @@ class Transactions:
         raise TransactionsException(
             'Transactions DF can\'t be directly modified.')
 
+    # def add(self, time: str, timezone: str, type: str, source: Source, desc: str,
+    #         amount: float, fee: float = 0.0, note: str = None,
+    #         category: str = None, tags: list = []) -> None:
+
+    #     df = pd.DataFrame(columns=Config.headers())
+
+    #     # Time
+    #     df['time'] = pd.to_datetime(time).dt.tz_localize(timezone).dt.tz_convert(
+    #         self._cfg.local_timezone).dt.tz_localize(None)
+
+    #     df['type'] = type
+
     def add_bulk(self, new_dfs: list) -> None:
 
         for new_df in new_dfs:
@@ -659,7 +671,7 @@ class Transactions:
                 'Either \'i\' must be set or \'col\' and \'key\'.\n'
                 'Parameters received are: i: {}, col: {}, key: {}'.format(i, col, key))
 
-    def update(self, index: int or list(int) = None,
+    def update(self, index: list = None,
                search_result: pd.DataFrame = None,
                description: str = None,
                amount: float = None,

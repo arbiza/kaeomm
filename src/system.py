@@ -9,9 +9,10 @@ from config import Config
 
 def db_columns_update():
     '''
-    1. Update 'headers' with the headers expected in the new version
-    2. Run this file calling this function in main
-    3. Update the headers list in the Trasnaction class with the same headers
+    1. Update 'headers' list below  with the headers expected in the new version
+    2. Update the data source in "Config('../data/db')"
+    3. Run this file calling this function in main
+    4. Update the headers list in the Trasnaction class with the same headers
        used here
 
     The program might work normally with the new headers structure.
@@ -20,6 +21,7 @@ def db_columns_update():
     cfg = Config('../data/db')
 
     headers = ['time',
+               'input',
                'type',
                'source',
                'source_id',
