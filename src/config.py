@@ -47,6 +47,7 @@ class Config:
 
         self._system_categories = [
             'cash withdraw',  # cash withdraws are not expenses
+            'currency exchange',
             'self transfer'  # moving from between sources are not accounted
         ]
 
@@ -78,7 +79,7 @@ class Config:
 
     def add_new_category(self, category: str) -> str:
         c = category.lower().capitalize()
-        if c not in self._categories:
+        if c not in self._categories and c != 'Nan' and c != '':
             self._categories.append(c)
             self._categories.sort()
         return c
