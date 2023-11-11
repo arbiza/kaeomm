@@ -83,17 +83,31 @@ class Transactions:
         raise TransactionsException(
             'Transactions DF can\'t be directly modified.')
 
-    # def add(self, time: str, timezone: str, type: str, source: Source, desc: str,
-    #         amount: float, fee: float = 0.0, note: str = None,
-    #         category: str = None, tags: list = []) -> None:
+    def add(self, time: str, timezone: str, type: str, source: Source, desc: str,
+            amount: float, fee: float = 0.0, note: str = None,
+            category: str = None, tags: list = []) -> None:
 
-    #     df = pd.DataFrame(columns=Config.headers())
+        df = pd.DataFrame(columns=Config.headers())
 
-    #     # Time
-    #     df['time'] = pd.to_datetime(time).dt.tz_localize(timezone).dt.tz_convert(
-    #         self._cfg.local_timezone).dt.tz_localize(None)
+        # Time
+        df['time'] = pd.to_datetime(time).dt.tz_localize(timezone).dt.tz_convert(
+            self._cfg.local_timezone).dt.tz_localize(None)
 
-    #     df['type'] = type
+        df['input'] = 'manual'
+        df['type'] = type
+        df['source'] = source.name
+        df['source_id'] = source.id
+        df['desc'] = desc
+        df['amount'] = amount
+        df['fee'] = fee
+        df['total'] = amount + fee
+        df['curr'] = source.currency
+        df['note'] = note
+        df['category'] = category
+        df['tags'] = tags
+
+        pd.concat([self._df, df], ignore_index=True)
+        self._sort()
 
     def add_bulk(self, new_dfs: list) -> None:
 
