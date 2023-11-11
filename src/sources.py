@@ -60,6 +60,14 @@ class Source:
     def id(self, value):
         raise SourcesException('"id" can\'t be directly modified.')
 
+    @property
+    def timezone(self):
+        return self._stmt_timezone
+
+    @timezone.setter
+    def timezone(self, value):
+        raise SourcesException('"timezone" can\'t be directly modified.')
+
     def add_stmt_column_mapping(self, src_col: list, dst_col: str) -> None:
         if dst_col not in Config.headers():
             raise SourcesException(
