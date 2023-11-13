@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"code-runner.executorMap": {
+			"python": "cd src && ../.venv/bin/python -u",
+		}
+	}
+}
