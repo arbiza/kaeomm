@@ -15,20 +15,9 @@ class Config:
 
     def __init__(self, config_dir: str = None) -> None:
         '''
-        Headers of Transaction DataFrame:
-
-            - time: date and time in UTC
-            - acct: Stands for "Account". It's the source of the transaction
-                    (bank account, card, manually added, etc.)
-            - desc: Description
-            - sum: Amount of the transaction
-            - cur: Currency abbreviation
-            - id: Unique identifier for the transaction
-            - ref: When a transaction relates to another transaction, this cell will have
-                the other transaction's ID
-            - category: Category name
-            - tags: List of tags
         '''
+        self._app_name = 'kaeomm'
+
         if config_dir is not None:
             self._config_dir = config_dir if config_dir[-1] == '/' else config_dir + '/'
 
@@ -50,6 +39,15 @@ class Config:
             'currency exchange',
             'self transfer'  # moving from between sources are not accounted
         ]
+
+    @property
+    def app_name(self):
+        return self._app_name
+
+    @app_name.setter
+    def app_name(self, value):
+        raise ConfigException(
+            '"app_name" can\'t be modified')
 
     @property
     def categories(self):
@@ -112,6 +110,22 @@ class Config:
                 'curr',
                 'note',
                 'system_cat',
+                'category',
+                'tags'
+                ]
+
+    @staticmethod
+    def public_headers() -> list:
+        '''Returns the transactions DataFrame headers list'''
+        return ['time',
+                'type',
+                'source',
+                'desc',
+                'amount',
+                'fee',
+                'total',
+                'curr',
+                'note',
                 'category',
                 'tags'
                 ]

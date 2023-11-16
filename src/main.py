@@ -78,8 +78,10 @@ def reset(t: Transactions, sources: Sources) -> None:
         ['Benefeciary/Sender', 'Description'], 'desc')
     millennium_savings.add_stmt_column_mapping(['Debits', 'Credits'], 'amount')
 
+    pluxee_phy = Source('Pluxee - physical card', 'PLN', 'Europe/Warsaw')
+
     [sources.add_source(s) for s in [
-        revolut_pln, revolut_eur, revolut_usd, revolut_gbp, millennium_pln, millennium_card, millennium_savings, millennium_eur, millennium_usd]
+        revolut_pln, revolut_eur, revolut_usd, revolut_gbp, millennium_pln, millennium_card, millennium_savings, millennium_eur, millennium_usd, pluxee_phy]
      ]
 
     new_dfs = [
@@ -109,18 +111,60 @@ def reset(t: Transactions, sources: Sources) -> None:
 if __name__ == "__main__":
 
     cfg = Config('../data/db')
-    t = Transactions(cfg)
-
     s = Sources(cfg)
+    t = Transactions(cfg, s)
 
     # reset(t, s)
 
-    # t.search_n_add_category_tag('desc', 'Dominika', 'home', ['rent'])
-    # t.search_n_add_category_tag(
-    #     'desc', 'Biedronka', 'groceries', ['alcohol', 'food'])
-    # t.search_n_add_category_tag('desc', 'UPC Polska', 'services', [
-    #                             'internet', 'essential'])
+    # t.update(
+    #     search_result=t.search(
+    #         # index=[2092],
+    #         # start_date='2023-07-13',
+    #         # end_date='2023-07-15',
+    #         # type='TRADE',
+    #         # source='',
+    #         # description='jatagan',
+    #         # total=,
+    #         # currency='',
+    #         # note='',
+    #         # system_category='',
+    #         # categories='',
+    #         # tags=['Long-lasting goods']
+    #     ),
+    #     # description='',
+    #     # amount=,
+    #     # fee=,
+    #     # note='Truflo\'s castration',
+    #     # system_category='self transfer',
+    #     # category='pet',
+    #     # tags=['truflo', 'veterinarian'],
+    #     overwrite_tags=True
+    # )
 
-    t.print_to_cli([], 20)
-    t.save()
-    s.save()
+    # with pd.option_context('display.min_rows', 100, 'display.max_rows', 100):
+    #     print(
+    #         t.search(
+    #             # index=[1571],
+    #             # start_date='2023-07-13',
+    #             # end_date='2023-07-15',
+    #             # type='TRADE',
+    #             # source='',
+    #             description='jatagan',
+    #             # total=,
+    #             # currency='',
+    #             # note='',
+    #             # system_category='',
+    #             # categories='',
+    #             # tags=['Long-lasting goods']
+    #         )
+    #     )
+
+    # t.add('2023-11-10', 'Europe/Warsaw', 'CARD', 'Pluxee - physical card', )
+
+    t.print_to_cli([], 100)
+
+    # t.save()
+    # s.save()
+    # cfg.save()
+
+    # t.backup()
