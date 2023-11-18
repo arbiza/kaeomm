@@ -114,21 +114,6 @@ class Config:
                 'tags'
                 ]
 
-    @staticmethod
-    def public_headers() -> list:
-        '''Returns the transactions DataFrame headers list'''
-        return ['time',
-                'type',
-                'source',
-                'desc',
-                'amount',
-                'fee',
-                'total',
-                'curr',
-                'note',
-                'category',
-                'tags'
-                ]
 
     def save(self) -> bool:
         config = {

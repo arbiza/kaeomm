@@ -31,6 +31,6 @@ def transactions():
         end_date='2023-10-31'
     )
 
-    # return render_template('transactions.html', app_name=cfg.app_name, dfs=[df[cfg.public_headers()].tail().to_html(classes='data')])
+    # return render_template('transactions.html', app_name=cfg.app_name, dataframe=df[cfg.public_headers()].tail().to_html(classes='text-start table table-borderless table-striped table-hover table-responsive align-middle'))
 
-    return render_template('transactions.html', app_name=cfg.app_name, dataframe=df[cfg.public_headers()].tail().to_html(classes='data'))
+    return render_template('transactions.html', app_name=cfg.app_name, dataframe=df, headers=cfg.headers())

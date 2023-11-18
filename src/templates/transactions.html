@@ -3,11 +3,105 @@
 
 <h1>This is the Transactions page</h1>
 
-<section id="transactions">
+<section id="transactions" class="row gy-lg-2">
 
-    <div id="dataframe">
-        {{ dataframe|safe }}
+    <script>
+        $(document).ready(function () {
+            $(".transactions-row").click(function () {
+                $("#t_time").html($(this).data('time'));
+                $("#t_time").html($(this).data('time'));
+                $("#t_type").html($(this).data('type'));
+                $("#t_source").html($(this).data('source'));
+                $("#t_source_id").html($(this).data('source_id'));
+                $("#t_desc").html($(this).data('desc'));
+                $("#t_amount").html($(this).data('amount'));
+                $("#t_fee").html($(this).data('fee'));
+                $("#t_total").html($(this).data('total'));
+                $("#t_curr").html($(this).data('curr'));
+                $("#t_note").html($(this).data('note'));
+                $("#t_category").html($(this).data('category'));
+                $("#t_tags").html($(this).data('tags'));
+
+                $('#modal_transactions').modal('show');
+            });
+        });
+    </script>
+
+    <div id="modal_transactions" class="modal fade">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h1>Details</h1>
+                    <button class="btn-close" data-bs-dismiss="modal" data-bs-target="modal_transactions"></button>
+                </div>
+                <div class="modal-body row">
+                    <div class="col">
+                        <p>Date/time:</p>
+                        <p>Type:</p>
+                        <p>Source:</p>
+                        <p>Description:</p>
+                        <p>Amount:</p>
+                        <p>Fee:</p>
+                        <p>Total:</p>
+                        <p>Currency:</p>
+                        <p>Category:</p>
+                        <p>Tags:</p>
+                        <p>Note:</p>
+                    </div>
+                    <div class="col">
+                        <p id="t_time" class="text-nowrap"></p>
+                        <p id="t_type"></p>
+                        <p id="t_source"></p>
+                        <p id="t_desc"></p>
+                        <p id="t_amount"></p>
+                        <p id="t_fee"></p>
+                        <p id="t_total"></p>
+                        <p id="t_curr"></p>
+                        <p id="t_category"></p>
+                        <p id="t_tags"></p>
+                        <p id="t_note"></p>
+                    </div>
+                    <div class="col">
+                        <p>buttons</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <table class="table table-striped table-hover table-responsive-lg align-middle table-borderless">
+        <thead>
+            <tr>
+                <th scope="col" class="text-nowrap">Date & time</th>
+                <th scope="col">Type</th>
+                <th scope="col">Source</th>
+                <th scope="col">Description</th>
+                <th scope="col">Total</th>
+                <th scope="col">Currency</th>
+                <th scope="col">Category</th>
+                <th scope="col">Tags</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for index,row in dataframe.iterrows() %}
+            <tr class="transactions-row" data-index="{{index}}" data-time="{{row['time']}}" data-type="{{row['type']}}"
+                data-source="{{row['source']}}" data-source_id="{{row['source_id']}}" data-desc="{{row['desc']}}"
+                data-amount="{{row['amount']}}" data-fee="{{row['fee']}}" data-total="{{row['total']}}"
+                data-curr="{{row['curr']}}" data-note="{{row['note']}}" data-category="{{row['category']}}"
+                data-tags="{{row['tags']}}">
+                <td scope="col" class="text-nowrap">{{ row['time'] }}</td>
+                <td scope="col">{{ row['type'] }}</td>
+                <td scope="col">{{ row['source'] }}</td>
+                <td scope="col">{{ row['desc'] }}</td>
+                <td scope="col" {% if row['total'] < 0%} class="lower_than_zero" {%endif%}>{{ row['total'] }}</td>
+                <td scope="col">{{ row['curr'] }}</td>
+                <td scope="col">{{ row['category'] }}</td>
+                <td scope="col">{{ row['tags'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
 </section>
 

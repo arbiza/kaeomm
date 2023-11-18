@@ -1,0 +1,16 @@
+:root {
+    --my-red: #B00020;
+}
+
+/* table.table.table-striped thead tr th {
+    background-color: rgb(32, 118, 139);
+} */
+
+table.table.table-striped tr {
+    text-align: left !important;
+    font-size: 0.8em !important;
+}
+
+.lower_than_zero {
+    color: var(--my-red) !important
+}
