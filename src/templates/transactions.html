@@ -1,41 +1,49 @@
 {% extends "index.html" %}
 {% block main_content %}
 
-<h1>This is the Transactions page</h1>
+<!-- This is already inside a 'div' with class 'container' -->
 
-<section id="transactions" class="row gy-lg-2">
 
-    <script>
-        $(document).ready(function () {
-            $(".transactions-row").click(function () {
-                $("#t_time").html($(this).data('time'));
-                $("#t_time").html($(this).data('time'));
-                $("#t_type").html($(this).data('type'));
-                $("#t_source").html($(this).data('source'));
-                $("#t_source_id").html($(this).data('source_id'));
-                $("#t_desc").html($(this).data('desc'));
-                $("#t_amount").html($(this).data('amount'));
-                $("#t_fee").html($(this).data('fee'));
-                $("#t_total").html($(this).data('total'));
-                $("#t_curr").html($(this).data('curr'));
-                $("#t_note").html($(this).data('note'));
-                $("#t_category").html($(this).data('category'));
-                $("#t_tags").html($(this).data('tags'));
+<script>
+    $(document).ready(function () {
+        $(".k_trx_row").click(function () {
 
-                $('#modal_transactions').modal('show');
-            });
+            localStorage.setItem("index", $(this).data('index'));
+
+            $("#t_time").html($(this).data('time'));
+            $("#t_time").html($(this).data('time'));
+            $("#t_type").html($(this).data('type'));
+            $("#t_source").html($(this).data('source'));
+            $("#t_source_id").html($(this).data('source_id'));
+            $("#t_desc").html($(this).data('desc'));
+            $("#t_amount").html($(this).data('amount'));
+            $("#t_fee").html($(this).data('fee'));
+            $("#t_total").html($(this).data('total'));
+            $("#t_curr").html($(this).data('curr'));
+            $("#t_note").html($(this).data('note'));
+            $("#t_category").html($(this).data('category'));
+            $("#t_tags").html($(this).data('tags'));
+
+            $('#modal_transactions').modal('show');
         });
-    </script>
 
-    <div id="modal_transactions" class="modal fade">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
+        $("#button-spread").click(function () {
+            let index = localStorage.getItem('index')
+            window.location.href = 'spread?index=' + index
+        });
 
-                <div class="modal-header">
-                    <h1>Details</h1>
-                    <button class="btn-close" data-bs-dismiss="modal" data-bs-target="modal_transactions"></button>
-                </div>
-                <div class="modal-body row">
+    });
+</script>
+
+<div id="modal_transactions" class="modal fade">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1>Details</h1>
+                <button class="btn-close" data-bs-dismiss="modal" data-bs-target="modal_transactions"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
                     <div class="col">
                         <p>Date/time:</p>
                         <p>Type:</p>
@@ -62,47 +70,63 @@
                         <p id="t_tags"></p>
                         <p id="t_note"></p>
                     </div>
-                    <div class="col">
-                        <p>buttons</p>
-                    </div>
+                </div>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href=""></a>
+                    <button id="button-spread" class="btn btn-primary me-md-2" type="button">Spread</button>
+                    <button class="btn btn-primary" type="button">Combine</button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <table class="table table-striped table-hover table-responsive-lg align-middle table-borderless">
-        <thead>
-            <tr>
-                <th scope="col" class="text-nowrap">Date & time</th>
-                <th scope="col">Type</th>
-                <th scope="col">Source</th>
-                <th scope="col">Description</th>
-                <th scope="col">Total</th>
-                <th scope="col">Currency</th>
-                <th scope="col">Category</th>
-                <th scope="col">Tags</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for index,row in dataframe.iterrows() %}
-            <tr class="transactions-row" data-index="{{index}}" data-time="{{row['time']}}" data-type="{{row['type']}}"
-                data-source="{{row['source']}}" data-source_id="{{row['source_id']}}" data-desc="{{row['desc']}}"
-                data-amount="{{row['amount']}}" data-fee="{{row['fee']}}" data-total="{{row['total']}}"
-                data-curr="{{row['curr']}}" data-note="{{row['note']}}" data-category="{{row['category']}}"
-                data-tags="{{row['tags']}}">
-                <td scope="col" class="text-nowrap">{{ row['time'] }}</td>
-                <td scope="col">{{ row['type'] }}</td>
-                <td scope="col">{{ row['source'] }}</td>
-                <td scope="col">{{ row['desc'] }}</td>
-                <td scope="col" {% if row['total'] < 0%} class="lower_than_zero" {%endif%}>{{ row['total'] }}</td>
-                <td scope="col">{{ row['curr'] }}</td>
-                <td scope="col">{{ row['category'] }}</td>
-                <td scope="col">{{ row['tags'] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="row">
+    <section id="k_trx_list" class="col-lg-6">
 
-</section>
+        {% for index,row in dataframe.iterrows() %}
+
+        <div class="row pb-lg-5 k_trx_row" data-index="{{index}}" data-time="{{row['time']}}"
+            data-type="{{row['type']}}" data-source="{{row['source']}}" data-source_id="{{row['source_id']}}"
+            data-desc="{{row['desc']}}" data-amount="{{row['amount']}}" data-fee="{{row['fee']}}"
+            data-total="{{row['total']}}" data-curr="{{row['curr']}}" data-note="{{row['note']}}"
+            data-category="{{row['category']}}" data-tags="{{row['tags']}}">
+
+            <div class="row">
+                <div class="col-lg-9">
+                    <p class="mb-2 k_trx_level_1">{{ row['desc'] }}</p>
+                    <p class="mb-2 k_trx_level_2"> {{ row['time'] }} </p>
+                </div>
+                <div class="col-lg-3 mb2 text-end k_trx_level_1 {% if row['total'] < 0 %} lower_than_zero {%endif%}">
+                    <span> {{ row['total'] }} </span>
+                    <span class="ms-1">{{ row['curr'] }}</span>
+                </div>
+            </div>
+            <div class="row k_trx_level_3">
+                <div class="col-lg-6">
+                    <span>{{ row['source'] }}</span> - <span>{{ row['type'] }}</span>
+                </div>
+                <div class="col-lg-6 text-end">
+                    <span>
+                        <i class="bi bi-archive pe-1"></i>
+                        <span class="pe-1">{{ row['category'] }}</span>
+                        <i class="bi bi-plus-circle"></i>
+                    </span>
+                    <span class="ms-3">
+                        <i class="bi bi-tags pe-1"></i>
+                        <span class="pe-1">{{ row['tags'] }}</span>
+                        <i class="bi bi-plus-circle"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    </section>
+
+    <section class="col-lg-4 offset-lg-2">
+        Controls
+    </section>
+</div>
 
 {% endblock %}

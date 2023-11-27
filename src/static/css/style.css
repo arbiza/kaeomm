@@ -1,16 +1,78 @@
 :root {
-    --my-red: #B00020;
+    --color-primary: #0288D1;
+    --color-primary-variant: #5EB8FF;
+    --color-on-primary: #FFFFFF;
+
+    --color-secondary: #E68300;
+    --color-secondary-variant: #FF9C1A;
+    --color-on-secondary: #FFFFFF;
+
+    --color-background: #FFFFFF;
+    --color-surface: #EEF0F1;
+
+    --color-shade-level-1: #202A2F;
+    --color-shade-level-2: #4D5559;
+    --color-shade-level-3: #797F82;
+    --color-shade-level-4: #A6AAAC;
+    --color-shade-level-5: #D2D4D5;
+
+    --color-positive: #019324;
+    --color-negative: #930101;
+    --color-warning: #FFD398;
+    --color-info: #6E0193;
 }
 
-/* table.table.table-striped thead tr th {
-    background-color: rgb(32, 118, 139);
-} */
-
-table.table.table-striped tr {
-    text-align: left !important;
-    font-size: 0.8em !important;
+body {
+    color: var(--color-shade-level-1);
 }
+
+.k-bg-primary {
+    background-color: var(--color-primary);
+    color: var(--color-primary-text-on);
+}
+
+.k-bg-primary:hover {
+    background-color: var(--color-primary-on);
+}
+
+.k-bg-neutral-0 {
+    background-color: var(--color-neutral-0);
+}
+
+#add-new-menu {
+    font-size: 2.5rem;
+    color: var(--color-primary)
+}
+
+#add-new-menu:hover {
+    color: var(--color-primary-on);
+}
+
+
+#k_trx_list .k_trx_level_1 {
+    font-weight: 500;
+}
+
+#k_trx_list .k_trx_level_2 {
+    font-size: normal;
+    color: var(--color-shade-level-2)
+}
+
+#k_trx_list .k_trx_level_3 {
+    font-size: small;
+    font-style: italic;
+    color: var(--color-shade-level-3);
+}
+
 
 .lower_than_zero {
-    color: var(--my-red) !important
+    color: var(--color-negative) !important
+}
+
+.debub-box-1 {
+    background-color: var(--color-shade-level-5);
+}
+
+.debub-box-2 {
+    background-color: var(--color-shade-level-4);
 }

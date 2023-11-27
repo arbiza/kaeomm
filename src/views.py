@@ -1,6 +1,7 @@
 import pandas as pd
+import json
 
-from flask import Blueprint, render_template, redirect, url_for
+from flask import Blueprint, render_template, redirect, url_for, request
 
 from config import Config
 from sources import Sources
@@ -31,6 +32,16 @@ def transactions():
         end_date='2023-10-31'
     )
 
-    # return render_template('transactions.html', app_name=cfg.app_name, dataframe=df[cfg.public_headers()].tail().to_html(classes='text-start table table-borderless table-striped table-hover table-responsive align-middle'))
+    df[['category', 'tags']] = df[['category', 'tags']].fillna('')
 
-    return render_template('transactions.html', app_name=cfg.app_name, dataframe=df, headers=cfg.headers())
+    return render_template('transactions.html', app_name=cfg.app_name, dataframe=df.head(20))
+
+
+@views.route('/spread')
+def spread():
+
+    index = request.args.get('index')
+
+    df = t.search(index=[int(index)])
+
+    return render_template('transaction_spread.html', app_name=cfg.app_name, index=index, df=df.to_dict(orient='records'))
