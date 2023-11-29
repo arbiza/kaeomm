@@ -32,9 +32,10 @@ def transactions():
         end_date='2023-10-31'
     )
 
-    df[['category', 'tags']] = df[['category', 'tags']].fillna('')
+    df[['category', 'tags', 'note']] = df[[
+        'category', 'tags', 'note']].fillna('')
 
-    return render_template('transactions.html', app_name=cfg.app_name, dataframe=df.head(20))
+    return render_template('transactions.html', app_name=cfg.app_name, dataframe=df.head(200))
 
 
 @views.route('/spread')

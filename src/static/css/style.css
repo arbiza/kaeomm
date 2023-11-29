@@ -60,7 +60,6 @@ body {
 
 #k_trx_list .k_trx_level_3 {
     font-size: small;
-    font-style: italic;
     color: var(--color-shade-level-3);
 }
 

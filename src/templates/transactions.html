@@ -92,33 +92,50 @@
             data-total="{{row['total']}}" data-curr="{{row['curr']}}" data-note="{{row['note']}}"
             data-category="{{row['category']}}" data-tags="{{row['tags']}}">
 
-            <div class="row">
-                <div class="col-lg-9">
-                    <p class="mb-2 k_trx_level_1">{{ row['desc'] }}</p>
-                    <p class="mb-2 k_trx_level_2"> {{ row['time'] }} </p>
+            <div class="col-lg-2 text-center">
+                <p class="k_trx_level_1">
+                    {{ row['time'].strftime('%d') }} {{ row['time'].strftime('%b') }}
+                </p>
+                <p class="k_trx_level_2">
+                    {{ row['time'].strftime('%Y') }}
+                </p>
+                <p class="k_trx_level_3">
+                    {{ row['time'].strftime('%H') }}:{{ row['time'].strftime('%H') }}
+                </p>
+
+            </div>
+
+            <div class="col-lg-10">
+                <div class="row">
+                    <div class="col-lg-9">
+                        <p class="mb-2 k_trx_level_1">{{ row['desc'] }}</p>
+                    </div>
+                    <div
+                        class="col-lg-3 mb2 text-end k_trx_level_1 {% if row['total'] < 0 %} lower_than_zero {%endif%}">
+                        <span> {{ row['total'] }} </span>
+                        <span class="ms-1">{{ row['curr'] }}</span>
+                    </div>
                 </div>
-                <div class="col-lg-3 mb2 text-end k_trx_level_1 {% if row['total'] < 0 %} lower_than_zero {%endif%}">
-                    <span> {{ row['total'] }} </span>
-                    <span class="ms-1">{{ row['curr'] }}</span>
+                <div class="row k_trx_level_3">
+                    <div class="col-lg-6">
+                        <span>{{ row['source'] }}</span> - <span>{{ row['type'] }}</span>
+                    </div>
+                    <div class="col-lg-6 text-end">
+                        <span>
+                            <i class="bi bi-archive pe-1"></i>
+                            <span class="pe-1">{{ row['category'] }}</span>
+                            <i class="bi bi-plus-circle"></i>
+                        </span>
+                        <span class="ms-3">
+                            <i class="bi bi-tags pe-1"></i>
+                            <span class="pe-1">{{ row['tags'] }}</span>
+                            <i class="bi bi-plus-circle"></i>
+                        </span>
+                    </div>
                 </div>
             </div>
-            <div class="row k_trx_level_3">
-                <div class="col-lg-6">
-                    <span>{{ row['source'] }}</span> - <span>{{ row['type'] }}</span>
-                </div>
-                <div class="col-lg-6 text-end">
-                    <span>
-                        <i class="bi bi-archive pe-1"></i>
-                        <span class="pe-1">{{ row['category'] }}</span>
-                        <i class="bi bi-plus-circle"></i>
-                    </span>
-                    <span class="ms-3">
-                        <i class="bi bi-tags pe-1"></i>
-                        <span class="pe-1">{{ row['tags'] }}</span>
-                        <i class="bi bi-plus-circle"></i>
-                    </span>
-                </div>
-            </div>
+
+
         </div>
         {% endfor %}
 
