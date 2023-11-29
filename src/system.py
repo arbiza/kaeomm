@@ -3,6 +3,7 @@
 
 
 import pandas as pd
+import datetime
 
 from config import Config
 
@@ -20,7 +21,8 @@ def db_columns_update():
 
     cfg = Config('../data/db')
 
-    headers = ['time',
+    headers = ['id',
+               'time',
                'input',
                'type',
                'source',
@@ -31,7 +33,7 @@ def db_columns_update():
                'total',
                'curr',
                'note',
-               'system_cat',
+               'system',
                'category',
                'tags'
                ]
@@ -47,5 +49,38 @@ def db_columns_update():
                   sep='|', index=False)
 
 
+def migrate_colum(col_a, col_b):
+    '''
+    Copies the content in column A to column B
+    '''
+
+    cfg = Config('../data/db')
+    df = pd.read_csv(cfg.db_dir + 'transactions.csv', sep='|')
+
+    df[col_b] = df[col_a]
+
+    df.to_csv(cfg.db_dir + 'transactions.csv',
+              sep='|', index=False)
+
+
+def set_id():
+    '''
+    Sets a value to the 'id' column if it's empty.
+    The id is an integer (the highest id value + 1).
+    '''
+
+    cfg = Config('../data/db')
+    df = pd.read_csv(cfg.db_dir + 'transactions.csv', sep='|')
+
+    for i in range(0, len(df)):
+        if pd.isna(df.loc[i, 'id']) or df.loc[i, 'id'] == 0:
+            df.loc[i, 'id'] = df['id'].max() + 1
+
+    df.to_csv(cfg.db_dir + 'transactions.csv',
+              sep='|', index=False)
+
+
 if __name__ == "__main__":
-    db_columns_update()
+    # db_columns_update()
+    # migrate_colum('system_cat', 'system')
+    set_id()

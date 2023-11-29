@@ -98,7 +98,8 @@ class Config:
     @staticmethod
     def headers() -> list:
         '''Returns the transactions DataFrame headers list'''
-        return ['time',
+        return ['id',
+                'time',
                 'input',
                 'type',
                 'source',
@@ -109,11 +110,10 @@ class Config:
                 'total',
                 'curr',
                 'note',
-                'system_cat',
+                'system',
                 'category',
                 'tags'
                 ]
-
 
     def save(self) -> bool:
         config = {
