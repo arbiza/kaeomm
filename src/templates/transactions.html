@@ -6,43 +6,76 @@
 
 <script>
     $(document).ready(function () {
-        $(".k_trx_row").click(function () {
-
-            localStorage.setItem("index", $(this).data('index'));
-
-            $("#t_time").html($(this).data('time'));
-            $("#t_time").html($(this).data('time'));
-            $("#t_type").html($(this).data('type'));
-            $("#t_source").html($(this).data('source'));
-            $("#t_source_id").html($(this).data('source_id'));
-            $("#t_desc").html($(this).data('desc'));
-            $("#t_amount").html($(this).data('amount'));
-            $("#t_fee").html($(this).data('fee'));
-            $("#t_total").html($(this).data('total'));
-            $("#t_curr").html($(this).data('curr'));
-            $("#t_note").html($(this).data('note'));
-            $("#t_category").html($(this).data('category'));
-            $("#t_tags").html($(this).data('tags'));
-
-            $('#modal_transactions').modal('show');
-        });
 
         $("#button-spread").click(function () {
             let index = localStorage.getItem('index')
             window.location.href = 'spread?index=' + index
         });
 
+        jQuery.update_local_storage = function (object) {
+            localStorage.setItem("trx_index", $(object).closest('.k_trx_row').data('index'));
+            localStorage.setItem("trx_id", $(object).closest('.k_trx_row').data('id'));
+
+
+            $("#k_trx_modal_time_day").html($(object).closest('.k_trx_row').data('time_day'));
+            $("#k_trx_modal_time_month").html($(object).closest('.k_trx_row').data('time_month'));
+            $("#k_trx_modal_time_year").html($(object).closest('.k_trx_row').data('time_year'));
+            $("#k_trx_modal_time_hour").html($(object).closest('.k_trx_row').data('time_hour'));
+            $("#k_trx_modal_time_min").html($(object).closest('.k_trx_row').data('time_min'));
+            $("#k_trx_modal_input").html($(object).closest('.k_trx_row').data('input'));
+            $("#k_trx_modal_type").html($(object).closest('.k_trx_row').data('type'));
+            $("#k_trx_modal_source").html($(object).closest('.k_trx_row').data('source'));
+            $("#k_trx_modal_source_id").html($(object).closest('.k_trx_row').data('source_id'));
+            $("#k_trx_modal_desc").html($(object).closest('.k_trx_row').data('desc'));
+            $("#k_trx_modal_amount").html($(object).closest('.k_trx_row').data('amount'));
+            $("#k_trx_modal_fee").html($(object).closest('.k_trx_row').data('fee'));
+            $("#k_trx_modal_total").html($(object).closest('.k_trx_row').data('total'));
+            $("#k_trx_modal_curr").html($(object).closest('.k_trx_row').data('curr'));
+            $("#k_trx_modal_note").html($(object).closest('.k_trx_row').data('note'));
+            $("#k_trx_modal_category").html($(object).closest('.k_trx_row').data('category'));
+            $("#k_trx_modal_tags").html($(object).closest('.k_trx_row').data('tags'));
+        };
+
+        $(".k_trx_btn_edit").click(function () {
+
+            <!-- $.update_local_storage(this); -->
+            $('#k_trx_modal_index').attr("value", $(this).closest('.k_trx_row').data('index'));
+            $('#k_trx_modal_id').attr("value", $(this).closest('.k_trx_row').data('id'));
+            $('#k_trx_modal_date').attr("value", $(this).closest('.k_trx_row').data('date'));
+            $('#k_trx_modal_time').attr("value", $(this).closest('.k_trx_row').data('time_only'));
+            $('#k_trx_modal_desc').attr("value", $(this).closest('.k_trx_row').data('desc'));
+            $('#k_trx_modal_type').attr("value", $(this).closest('.k_trx_row').data('type'));
+            $('#k_trx_modal_src').attr("value", $(this).closest('.k_trx_row').data('source'));
+            $('#k_trx_modal_amount').attr("value", $(this).closest('.k_trx_row').data('amount'));
+            $('#k_trx_modal_fee').attr("value", $(this).closest('.k_trx_row').data('fee'));
+            $('#k_trx_modal_note').attr("value", $(this).closest('.k_trx_row').data('note'));
+            $('#k_trx_modal_category').attr("value", $(this).closest('.k_trx_row').data('category'));
+            $('#k_trx_modal_tags').attr("value", $(this).closest('.k_trx_row').data('tags'));
+
+
+            $('#k_trx_modal_edit').modal('show');
+        });
+
     });
 </script>
 
-<div id="modal_transactions" class="modal fade">
+<div id="k_trx_modal" class="modal fade">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h1>Details</h1>
                 <button class="btn-close" data-bs-dismiss="modal" data-bs-target="modal_transactions"></button>
             </div>
             <div class="modal-body">
+                <div class="d-flex">
+                    <span id="trx_time_day" class="pe-2"></span>
+                    <span id="trx_time_month" class="pe-2"></span>
+                    <span id="trx_time_year" class="pe-2"></span>
+                    <span id="trx_time_hour"></span>:<span id="trx_time_min"></span>
+                </div>
+                <div class="row">
+
+                </div>
+
                 <div class="row">
                     <div class="col">
                         <p>Date/time:</p>
@@ -58,19 +91,33 @@
                         <p>Note:</p>
                     </div>
                     <div class="col">
-                        <p id="t_time" class="text-nowrap"></p>
-                        <p id="t_type"></p>
-                        <p id="t_source"></p>
-                        <p id="t_desc"></p>
-                        <p id="t_amount"></p>
-                        <p id="t_fee"></p>
-                        <p id="t_total"></p>
-                        <p id="t_curr"></p>
-                        <p id="t_category"></p>
-                        <p id="t_tags"></p>
-                        <p id="t_note"></p>
+                        <p id="trx_time" class="text-nowrap"></p>
+                        <p id="trx_type"></p>
+                        <p id="trx_source"></p>
+                        <p id="trx_desc"></p>
+                        <p id="trx_amount"></p>
+                        <p id="trx_fee"></p>
+                        <p id="trx_total"></p>
+                        <p id="trx_curr"></p>
+                        <p id="trx_category"></p>
+                        <p id="trx_tags"></p>
+                        <p id="trx_note"></p>
                     </div>
                 </div>
+                <form method="POST">
+                    <h3 align="center">Login</h3>
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="Enter email" />
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                            placeholder="Enter password" />
+                    </div>
+                    <br />
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
                     <a href=""></a>
                     <button id="button-spread" class="btn btn-primary me-md-2" type="button">Spread</button>
@@ -81,42 +128,85 @@
     </div>
 </div>
 
+
+<div id="k_trx_modal_edit" class="modal fade">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit</h2>
+                <button class="btn-close" data-bs-dismiss="modal" data-bs-target="modal_transactions"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST">
+
+                    <!-- TODO
+                    - timezone (suggest the default one)
+                    - list of sources
+                    - total = amount + fee (it's not an input)
+                    -->
+
+                    <input id="k_trx_modal_index" class="form-control" type="hidden" name="index" />
+                    <input id="k_trx_modal_id" class="form-control" type="hidden" name="id" />
+                    <input id="k_trx_modal_date" class="form-control" type="date" name="date" required />
+                    <input id="k_trx_modal_time" class="form-control" type="time" name="time" required />
+                    <input id="k_trx_modal_desc" class="form-control" type="text" name="desc" required>
+                    <input id="k_trx_modal_type" class="form-control" type="text" name="type" required>
+                    <input id="k_trx_modal_src" class="form-control" type="text" name="src" required>
+                    <input id="k_trx_modal_amount" class="form-control" type="number" name="amount" required>
+                    <input id="k_trx_modal_fee" class="form-control" type="number" name="fee" required>
+                    <!-- <input id="k_trx_modal_total" class="form-control" type="number" name="total" required> -->
+                    <label for="k_trx_modal_note" class="form-label">Note:</label>
+                    <textarea id="k_trx_modal_note" class="form-control" rows="3" name="note"></textarea>
+                    <input id="k_trx_modal_category" class="form-control" type="text" name="category">
+                    <input id="k_trx_modal_tags" class="form-control" type="text" name="tags">
+
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" name="action" value="k_trx_edit_save">Save</button>
+                </form>
+            </div>
+            <div class="modal-footer">
+
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <section id="k_trx_list" class="col-lg-6">
 
         {% for index,row in dataframe.iterrows() %}
 
-        <div class="row pb-lg-5 k_trx_row" data-index="{{index}}" data-time="{{row['time']}}"
-            data-type="{{row['type']}}" data-source="{{row['source']}}" data-source_id="{{row['source_id']}}"
-            data-desc="{{row['desc']}}" data-amount="{{row['amount']}}" data-fee="{{row['fee']}}"
-            data-total="{{row['total']}}" data-curr="{{row['curr']}}" data-note="{{row['note']}}"
-            data-category="{{row['category']}}" data-tags="{{row['tags']}}">
+        <div class="row pt-lg-3 pe-lg-2 pb-lg-3 ps-lg-2 k_trx_row" data-index="{{index}}" data-id="{{row['id']}}"
+            data-time="{{row['time']}}" data-date="{{row['time'].strftime('%Y-%m-%d')}}"
+            data-time_only="{{row['time'].strftime('%H:%M')}}" data-time_day="{{row['time'].strftime('%d')}}"
+            data-time_month="{{row['time'].strftime('%b')}}" data-time_year="{{row['time'].strftime('%Y')}}"
+            data-time_hour="{{row['time'].strftime('%H')}}" data-time_min="{{row['time'].strftime('%M')}}"
+            data-input="{{row['input']}}" data-type="{{row['type']}}" data-source="{{row['source']}}"
+            data-source_id="{{row['source_id']}}" data-desc="{{row['desc']}}" data-amount="{{row['amount']}}"
+            data-fee="{{row['fee']}}" data-total="{{row['total']}}" data-curr="{{row['curr']}}"
+            data-note="{{row['note']}}" data-category="{{row['category']}}" data-tags="{{row['tags']}}">
 
-            <div class="col-lg-2 text-center">
+            <div class="col-lg-2 text-end k_trx_date">
                 <p class="k_trx_level_1">
-                    {{ row['time'].strftime('%d') }} {{ row['time'].strftime('%b') }}
+                    {{ row['time'].strftime('%d') }} {{ row['time'].strftime('%b') }} {{ row['time'].strftime('%y') }}
                 </p>
                 <p class="k_trx_level_2">
-                    {{ row['time'].strftime('%Y') }}
-                </p>
-                <p class="k_trx_level_3">
-                    {{ row['time'].strftime('%H') }}:{{ row['time'].strftime('%H') }}
+                    {{ row['time'].strftime('%H') }}:{{ row['time'].strftime('%M') }}
                 </p>
 
             </div>
 
-            <div class="col-lg-10">
+            <div class="col-lg-10 border-start">
                 <div class="row">
                     <div class="col-lg-9">
-                        <p class="mb-2 k_trx_level_1">{{ row['desc'] }}</p>
+                        <p class="k_trx_level_1">{{ row['desc'] }}</p>
                     </div>
-                    <div
-                        class="col-lg-3 mb2 text-end k_trx_level_1 {% if row['total'] < 0 %} lower_than_zero {%endif%}">
+                    <div class="col-lg-3 text-end k_trx_level_1 {% if row['total'] < 0 %} lower_than_zero {%endif%}">
                         <span> {{ row['total'] }} </span>
-                        <span class="ms-1">{{ row['curr'] }}</span>
+                        <span class="k_trx_currency ms-1">{{ row['curr'] }}</span>
                     </div>
                 </div>
-                <div class="row k_trx_level_3">
+                <div class="row k_trx_level_2">
                     <div class="col-lg-6">
                         <span>{{ row['source'] }}</span> - <span>{{ row['type'] }}</span>
                     </div>
@@ -133,10 +223,14 @@
                         </span>
                     </div>
                 </div>
+                <div class="d-flex justify-content-end k_trx_button">
+                    <button type="button" class="btn ps-lg-4 pe-0 k_trx_btn_edit">edit</button>
+                    <button type="button" class="btn ps-lg-4 pe-0 k_trx_btn_spread">spread</button>
+                    <button type="button" class="btn ps-lg-4 pe-0 k_trx_btn_extend">extend</button>
+                </div>
             </div>
-
-
         </div>
+
         {% endfor %}
 
     </section>

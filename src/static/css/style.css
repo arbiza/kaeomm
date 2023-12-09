@@ -48,21 +48,37 @@ body {
     color: var(--color-primary-on);
 }
 
+#k_trx_list .k_trx_row:hover {
+    background-color: var(--color-surface);
+}
+
+#k_trx_list .k_trx_row:hover .k_trx_button button {
+    color: var(--color-secondary)
+}
 
 #k_trx_list .k_trx_level_1 {
     font-weight: 500;
 }
 
 #k_trx_list .k_trx_level_2 {
-    font-size: normal;
-    color: var(--color-shade-level-2)
-}
-
-#k_trx_list .k_trx_level_3 {
     font-size: small;
     color: var(--color-shade-level-3);
 }
 
+#k_trx_list .k_trx_currency {
+    font-size: small;
+    font-weight: 300;
+}
+
+.k_trx_button button {
+    font-size: small;
+    font-weight: 500;
+    color: var(--color-shade-level-5);
+}
+
+.k_trx_button button:hover {
+    color: var(--color-secondary-variant);
+}
 
 .lower_than_zero {
     color: var(--color-negative) !important

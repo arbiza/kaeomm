@@ -4,7 +4,7 @@ import re
 
 from config import Config
 from sources import Sources, Source
-import utils
+from utils import datetime_for_filename, StdReturn
 
 
 class TransactionsException(Exception):
@@ -121,153 +121,9 @@ class Transactions:
         Saves the current transactions database to a file named with a timestamp
         '''
         self._df.to_csv(self._cfg.db_dir + 'transactions_' +
-                        utils.datetime_for_filename() + '.csv',
+                        datetime_for_filename() + '.csv',
                         sep='|',
                         index=False)
-
-    # @staticmethod
-    # def _column_update(row: pd.Series, search_col: str, is_number: bool,
-    #                    key: any, target_col: str, value: any = None,
-    #                    overwrite: bool = True) -> any:
-
-    #     if pd.isna(row[search_col]) or (not is_number and row[search_col] == ''):
-    #         return row[target_col]
-
-    #     if ((is_number and key == row[search_col]) or
-    #             (not is_number and key.lower() in row[search_col].lower())):
-    #         if overwrite or pd.isna(row[target_col]):
-    #             return ','.join(value) if isinstance(value, list) else value
-    #         else:
-    #             # Currently, the only column with list-like values is 'tags'.
-    #             # If it's a list, it will combine the lists into a comma-separated
-    #             # string and return, otherwise returns 'value' as it is.
-    #             return ','.join(value + row[target_col].split(',')) if isinstance(value, list) else value
-
-    #     return row[target_col]
-
-    def decompose(self, i: int, amount: float, fee: float, note: str,
-                  category: str = None, tags: list = None) -> None:
-        '''
-        Adds an additional transaction with some of the values from the original
-        one (at index 'i'). More entries will represent one transaction, but 
-        total amount will be split among them.
-
-        It's useful, for example, to decompose a supermarket transaction into 
-        different categories (food, alcohol, cleaning), or to separate the 
-        amount and the fee with different categories or tags.
-
-
-        Parameters
-        ----------
-        i : int
-            index of the transaction to be extended
-        amount : float
-            expense amount - it has to be smaller or equal to original amount
-        fee : float
-            fee amount - it has to be smaller or equal to original amount
-        note : str
-            a note, if wanted
-        category : str, optional, default=None
-            category for the extended transaction. If omitted, it will have the 
-            same as the original transaction; if '', it will be empty
-        tags : list, optional, default=None
-            list with tags for the extended to the transaction. If omitted, it 
-            will have the same as the original transaction; if [], it will be 
-            empty
-
-        Returns
-        -------
-        None
-        '''
-
-        # There are several restrictions for this operation. Since it decompose
-        # a transaction, the amounts have to mean fit into the combined amount
-        # and can't be both zero.
-        if amount == 0 and fee == 0:
-            raise TransactionsException(
-                '"amount" and "fee" can\'t both be zero')
-
-        # If it's an expense
-        if amount != 0 and self._df.loc[i]['total'] < 0:
-
-            if amount > 0:
-                amount *= -1
-            if fee > 0:
-                fee *= -1
-
-            # Amount + fee can't exceed the total
-            if (amount + fee) < self._df.loc[i]['total']:
-                raise TransactionsException(
-                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
-                        self._df.loc[i]['total'])
-                )
-
-            # Amount and fee have to be smaller than the original values
-            if amount < self._df.loc[i]['amount'] or fee < self._df.loc[i]['fee']:
-                raise TransactionsException(
-                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
-                        self._df.loc[i]['amount'], self._df.loc[i]['fee'])
-                )
-
-        # If it's an income
-        elif fee != 0 and self._df.loc[i]['total'] > 0:
-            if amount < 0:
-                amount *= -1
-            if fee < 0:
-                fee *= -1
-
-            # Amount + fee can't exceed the total
-            if (amount + fee) > self._df.loc[i]['total']:
-                raise TransactionsException(
-                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
-                        self._df.loc[i]['total'])
-                )
-
-            # Amount and fee have to be smaller than the original values
-            if amount > self._df.loc[i]['amount'] or fee > self._df.loc[i]['fee']:
-                raise TransactionsException(
-                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
-                        self._df.loc[i]['amount'], self._df.loc[i]['fee']))
-
-        category = self._df.loc[i]['category'] if category is None else self._cfg.add_new_category(
-            category)
-
-        if tags is None:
-            tags = self._df.loc[i]['tags']
-        elif isinstance(tags, list):
-            tags = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
-        else:
-            raise TransactionsException(
-                'Tags has to be a list or omitted (None)\n',
-                'The object receives is of type "{}"'.format(tags))
-
-        # Update the original transaction
-        self._df.loc[i, 'amount'] = self._df.loc[i]['amount'] - float(amount)
-        self._df.loc[i, 'fee'] = self._df.loc[i]['fee'] - fee
-        self._df.loc[i, 'total'] = self._df.loc[i]['amount'] + \
-            self._df.loc[i]['fee']
-
-        # Add the new transaction
-        self.add_bulk(
-            [pd.DataFrame(
-                [[
-                    self._df.loc[i]['time'],
-                    'decompose',
-                    self._df.loc[i]['source'],
-                    self._df.loc[i]['source_id'],
-                    self._df.loc[i]['desc'],
-                    float(amount),
-                    float(fee),
-                    float(amount + fee),
-                    self._df.loc[i]['curr'],
-                    note,
-                    '',
-                    category,
-                    tags
-                ]],
-                columns=Config.headers()
-            )
-            ])
 
     def df_info(self) -> str:
 
@@ -397,7 +253,7 @@ class Transactions:
                total: float = None,
                currency: str = None,
                note: str = None,
-               system_category: str = None,
+               system: str = None,
                categories: str or list(str) = None,
                tags: str or list(str) or int = None) -> pd.DataFrame:
         '''
@@ -432,8 +288,8 @@ class Transactions:
         note: str
             returns the transactions where the "note" column contains the value
             passed in "note". '*' returns any note
-        system_category: str
-            returns the transactions with the "system_category" specified.
+        system: str
+            returns the transactions with the "system" specified.
             '*' returns any category
         categories: str or list(str)
             when "str" with some value, return the transactions with the category
@@ -540,13 +396,13 @@ class Transactions:
                 s_df = s_df.loc[s_df['note'].str.contains(note, case=False)]
 
         # SYSTEM CATEGORY
-        if system_category is not None:
-            if system_category == '':
-                s_df = s_df[s_df['system_cat'].isna()]
-            elif system_category == '*':
-                s_df = s_df.dropna(subset=['system_cat'])
+        if system is not None:
+            if system == '':
+                s_df = s_df[s_df['system'].isna()]
+            elif system == '*':
+                s_df = s_df.dropna(subset=['system'])
             else:
-                s_df = s_df[(s_df['system_cat'] == system_category)]
+                s_df = s_df[(s_df['system'] == system)]
 
         # CATEGORY
         if categories is not None:
@@ -635,75 +491,163 @@ class Transactions:
         self._df.sort_values(by=['time'], inplace=True)
         self._df.reset_index(inplace=True, drop=True)
 
-    def _system_category(self, i: list = [], col: str = None,
-                         key: any = None, system_category: str = '') -> None:
+    def spread(self, i: int, amount: float, fee: float, note: str = None,
+               category: str = None, tags: list = None) -> None:
         '''
-        Adds or deletes system_cat to transactions based on a search or at a 
-        specific index. It's meant to be used by the class only.
+        Adds an additional transaction with some of the values from the original
+        one (at index 'i'). More entries will represent one transaction, but 
+        total amount will be split among them.
 
-        When 'index' is set, it will update the specified rows; when not, it will
-        search for 'key' in 'col'.
+        It's useful, for example, to decompose a supermarket transaction into 
+        different categories (food, alcohol, cleaning), or to separate the 
+        amount and the fee with different categories or tags.
+
+        The new transaction's 'system' column will reference the ID of the
+        original transaction.
+
 
         Parameters
         ----------
-        i : list
-            list of indexes of the rows to be modified
-        col : str
-            name of the column to perform the search
-        key : any
-            value the code will search for in the column
-        category : str, optional, default=''
-            category to be added to the transaction. When empty, the existing 
-            one will be removed.
+        i : int
+            index of the transaction to be extended
+        amount : float
+            expense amount - it has to be smaller or equal to original amount
+        fee : float
+            fee amount - it has to be smaller or equal to original amount
+        note : str
+            a note, if wanted
+        category : str, optional, default=None
+            category for the extended transaction. If omitted, it will have the 
+            same as the original transaction; if '', it will be empty
+        tags : list, optional, default=None
+            list with tags for the extended to the transaction. If omitted, it 
+            will have the same as the original transaction; if [], it will be 
+            empty
 
         Returns
         -------
         None
         '''
 
-        if not isinstance(i, list):
+        # There are several restrictions for this operation. Since it decompose
+        # a transaction, the amounts have to mean fit into the combined amount
+        # and can't be both zero.
+        if amount == 0 and fee == 0:
             raise TransactionsException(
-                'The method \'_system_category\' expects \'i\' as a list, it received a {}'.format(type(i)))
+                '"amount" and "fee" can\'t both be zero')
 
-        system_category = system_category.lower()
+        # If it's an expense
+        if amount != 0 and self._df.loc[i]['total'] < 0:
 
-        if system_category != '' and system_category not in self._cfg.system_categories:
-            raise TransactionsException(
-                'There is no system category named as \'{}\' and it can\'t be defined'.format(system_category))
+            if amount > 0:
+                amount *= -1
+            if fee > 0:
+                fee *= -1
 
-        # Set the system category at specified index
-        if len(i) > 0:
-            self._df['system_cat'][i] = system_category
+            # Amount + fee can't exceed the total
+            if (amount + fee) < self._df.loc[i]['total']:
+                raise TransactionsException(
+                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
+                        self._df.loc[i]['total'])
+                )
 
-        # Set the system category when the search for 'key' matches in 'col'
-        elif col is not None and key is not None:
-            self._df['system_cat'] = self._df.apply(
-                self._column_update, args=[col, is_numeric_dtype(self._df[col]), key, 'system_cat', system_category], axis=1)
+            # Amount and fee have to be smaller than the original values
+            if amount < self._df.loc[i]['amount'] or fee < self._df.loc[i]['fee']:
+                raise TransactionsException(
+                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
+                        self._df.loc[i]['amount'], self._df.loc[i]['fee'])
+                )
 
+        # If it's an income
+        elif fee != 0 and self._df.loc[i]['total'] > 0:
+            if amount < 0:
+                amount *= -1
+            if fee < 0:
+                fee *= -1
+
+            # Amount + fee can't exceed the total
+            if (amount + fee) > self._df.loc[i]['total']:
+                raise TransactionsException(
+                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
+                        self._df.loc[i]['total'])
+                )
+
+            # Amount and fee have to be smaller than the original values
+            if amount > self._df.loc[i]['amount'] or fee > self._df.loc[i]['fee']:
+                raise TransactionsException(
+                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
+                        self._df.loc[i]['amount'], self._df.loc[i]['fee']))
+
+        category = self._df.loc[i]['category'] if category is None else self._cfg.add_new_category(
+            category)
+
+        if tags is None:
+            tags = self._df.loc[i]['tags']
+        elif isinstance(tags, list):
+            tags = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
         else:
             raise TransactionsException(
-                'Either \'i\' must be set or \'col\' and \'key\'.\n'
-                'Parameters received are: i: {}, col: {}, key: {}'.format(i, col, key))
+                'Tags has to be a list or omitted (None)\n',
+                'The object receives is of type "{}"'.format(tags))
+
+        # Update the original transaction
+        self._df.loc[i, 'amount'] = self._df.loc[i]['amount'] - float(amount)
+        self._df.loc[i, 'fee'] = self._df.loc[i]['fee'] - fee
+        self._df.loc[i, 'total'] = self._df.loc[i]['amount'] + \
+            self._df.loc[i]['fee']
+        self._df.loc[i, 'system'] = 'spread'
+
+        # Add the new transaction
+        self.add_bulk(
+            [pd.DataFrame(
+                [[
+                    self._df['id'].max() + 1,
+                    self._df.loc[i]['time'],
+                    'manual',
+                    self._df.loc[i]['type'],
+                    self._df.loc[i]['source'],
+                    self._df.loc[i]['source_id'],
+                    self._df.loc[i]['desc'],
+                    float(amount),
+                    float(fee),
+                    float(amount + fee),
+                    self._df.loc[i]['curr'],
+                    note,
+                    self._df.loc[i, 'id'],
+                    category,
+                    tags
+                ]],
+                columns=Config.headers()
+            )
+            ])
 
     def update(self, index: list = None,
                search_result: pd.DataFrame = None,
+               time: str = None,
+               type: str = None,
+               source: str = None,
                description: str = None,
                amount: float = None,
                fee: float = None,
                note: str = None,
-               system_category: str = None,
+               system: str = None,
                category: str = None,
                tags: list = None,
-               overwrite_tags: bool = True) -> None:
+               overwrite_tags: bool = True) -> dict:
+
+        r = StdReturn(message="Transaction successfully updated")
 
         if index is None and search_result is None:
-            raise TransactionsException(
-                '"index" or "search_result" must be set. Both cannot be empty.'
-            )
+            r.success = False
+            r.message = 'Backend error with the transaction identifier'
+            r.details = '"index" or "search_result" must be set. Both cannot be empty.'
+            return r
+
         elif index is not None and search_result is not None:
-            raise TransactionsException(
-                'Set "index" or "search_result". Both cannot be set.'
-            )
+            r.success = False
+            r.message = 'Backend error with the transaction identifier'
+            r.details = '"index" and "search_result" were both set. Only one must be set.'
+            return r
 
         # Get the indexes of the rows to update.
         # When the indexes were provided, the program will make it as a list.
@@ -714,15 +658,41 @@ class Transactions:
             elif isinstance(index, list):
                 i = index
             else:
-                raise TransactionsException(
-                    'The method expects index as an int > 0 or list(int), it received a {}'.format(type(i)))
+                r.success = False
+                r.message = 'Backend error with the transaction index.'
+                r.details = 'The method expects index as an int > 0 or list(int), it received a {}'.format(type(i))
+                return r
 
         elif search_result is not None:
             i = list(search_result.index.values)
+            if len(i) == 0:
+                r.success = False
+                r.message = 'The search passed as parameter didn\'t return any transaction, thus the program had nothing to update.'
+                return r
 
-        # If the list of indexes is empty, there is nothing to do
-        if len(i) == 0:
-            return
+        if time is not None:
+            # The time has to be validated and converted to the timezone before
+            self._df.loc[i, 'time'] = time
+
+        self._df.loc[i, 'input'] = 'updated'
+
+        if type is not None:
+            self._df.loc[i, 'desc'] = type
+
+        if source is not None:
+            source_obj = None
+
+            for s in self._sources.sources:
+                if source.lower() == s.name.lower():
+                    source_obj = s
+
+            if source_obj is None:
+                r.success = False
+                r.message = 'There is no source named "{}". Please, register this source first.'.format(
+                    source)
+
+            self._df.loc[i, 'source'] = source_obj.name
+            self._df.loc[i, 'source_id'] = source_obj.id
 
         if description is not None:
             self._df.loc[i, 'desc'] = description
@@ -740,8 +710,8 @@ class Transactions:
         if note is not None:
             self._df.loc[i, 'note'] = note
 
-        if system_category is not None:
-            self._df.loc[i, 'system_cat'] = system_category
+        if system is not None:
+            self._df.loc[i, 'system'] = system
 
         if category is not None:
             category = self._cfg.add_new_category(category)
@@ -758,101 +728,4 @@ class Transactions:
                 + [t for t in tags if t not in r['tags']]
             )
 
-    # def update_transaction_tags_at_index(self, i, tags=[], overwrite=True):
-    #     '''
-    #     Adds or deletes transactions category based on a search.
-
-    #     If 'category' is empty, it will remove the existing category in the
-    #     transaction.
-
-    #     Parameters
-    #     ----------
-    #     i : list
-    #         list of indexes of the rows to be modified
-    #     tags : list, optional, default=[]
-    #         list with categories to be added to the transaction. If empty and
-    #         overwrite is True, the existing tags will be removed.
-    #     overwrite : book, optional, default=True
-    #         when False, the tags will be added to the existing transaction's
-    #         tag list; when True, it overwrites with the new values.
-
-    #     Returns
-    #     -------
-    #     None
-    #     '''
-
-    #     if not isinstance(i, list) or not isinstance(tags, list):
-    #         raise TransactionsException(
-    #             'The method \'update_transaction_tags_at_index\' expects two lists, it received {} and {}'.format(type(i), type(tags)))
-
-    #     tags = [self._cfg.add_new_tag(tag) for tag in tags]
-
-    #     for p in i:
-    #         if overwrite or pd.isna(self._df['tags'][p]):
-    #             self._df['tags'][p] = ','.join(tags)
-    #         else:
-    #             self._df['tags'][p] = ','.join(self._df['tags'][p].split(
-    #                 ',') + [t for t in tags if t not in self._df['tags'][p]])
-
-    # def update_transactions_category(self, col, key, category=str()):
-    #     '''
-    #     Adds or deletes transactions category based on a search.
-
-    #     If 'category' is empty, it will remove the existing category in the
-    #     transaction.
-
-    #     Parameters
-    #     ----------
-    #     col : str
-    #         name of the column to perform the search
-    #     key : any
-    #         value the code will search for in the column
-    #     category : str, optional, default=''
-    #         category to be added to the transaction. When empty, the existing
-    #         one will be removed.
-
-    #     Returns
-    #     -------
-    #     None
-    #     '''
-
-    #     self._df['category'] = self._df.apply(
-    #         self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'category', category], axis=1)
-
-    # def update_transactions_tags(self, col, key, tags=[], overwrite=True):
-    #     '''
-    #     Adds, appends, or deletes tags in transactions that match the search.
-
-    #     If 'overwrite' is True, the new values will overwrite the existing ones,
-    #     it includes replacing the tags with no tags.
-
-    #     Parameters
-    #     ----------
-    #     col : str
-    #         name of the column to perform the search
-    #     key : any
-    #         value the code will search for in the column
-    #     tags : list, optional, default=[]
-    #         list with new tags. If empty and overwrite is True, the existing tags
-    #         will be removed
-    #     overwrite : bool, optional, default=True
-    #         overwrites the existing tags, when True; appends when False
-
-    #     Returns
-    #     -------
-    #     None
-    #     '''
-
-    #     if not isinstance(tags, list):
-    #         raise TransactionsException(
-    #             'The method \'update_transactions_tags\' expects \'tags\' as a list, it received a {}'.format(type(tags)))
-
-    #     if len(tags) == 0 and overwrite is False:
-    #         raise TransactionsException(
-    #             '"tags" is empty and overwrite is set "False". With this combination, the method won\'t do anything.'
-    #         )
-
-    #     tags = [self._cfg.add_new_tag(tag) for tag in tags]
-
-    #     self._df['tags'] = self._df.apply(
-    #         self._column_update, args=[col, is_numeric_dtype(self._df[col].dtype), key, 'tags', tags, overwrite], axis=1)
+        return r

@@ -37,7 +37,9 @@ class Config:
         self._system_categories = [
             'cash withdraw',  # cash withdraws are not expenses
             'currency exchange',
-            'self transfer'  # moving from between sources are not accounted
+            'self transfer',  # moving from between sources are not accounted
+            'spread',
+            'extend'
         ]
 
     @property
@@ -100,7 +102,7 @@ class Config:
         '''Returns the transactions DataFrame headers list'''
         return ['id',
                 'time',
-                'input',
+                'input',  # manual | import
                 'type',
                 'source',
                 'source_id',

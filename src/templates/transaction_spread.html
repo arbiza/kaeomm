@@ -1,0 +1,55 @@
+{% extends "index.html" %}
+{% block main_content %}
+
+<h1>This is the Spread page</h1>
+
+<section id="transaction_spread" class="row gy-lg-2">
+
+    <div class="row justify-content-center">
+
+        <div id="spread-original" class="col k-bg-neutral-0">
+            <p>Existing transaction</p>
+            <div class="row">
+
+                <div class="col">
+                    <p>Date/time:</p>
+                    <p>Type:</p>
+                    <p>Source:</p>
+                    <p>Description:</p>
+                    <p>Amount:</p>
+                    <p>Fee:</p>
+                    <p>Total:</p>
+                    <p>Currency:</p>
+                    <p>Category:</p>
+                    <p>Tags:</p>
+                    <p>Note:</p>
+                </div>
+                <div class="col">
+                    <p id="t_time" class="text-nowrap">{{ df[0]['time'] }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <p>Spread transaction</p>
+            <input class="form-control" type="text" placeholder="{{ df[0]['time'] }}"
+                aria-label="Disabled input example" disabled>
+        </div>
+
+
+
+
+
+        <div class="col">
+
+
+
+
+        </div>
+
+
+    </div>
+
+</section>
+
+{% endblock %}
