@@ -85,29 +85,82 @@ class Transactions:
 
     def add(self, time: str, timezone: str, type: str, source: Source, desc: str,
             amount: float, fee: float = 0.0, note: str = None,
-            category: str = None, tags: list = []) -> None:
+            category: str = None, tags: list = []) -> StdReturn:
+        '''
+        Adds a new transaction.
+
+
+        Parameters
+        ----------
+        time : str
+            date or datetime - formats: yyyy-mm-dd, yyyymmdd, yyyy-mm-dd HH:mm:ss
+        timezone : str
+            timezone name as in pytz.all_timezones
+        type : str
+            type description, like "CARD", "CASH", "manual", etc.
+        source : str
+            source name (from the Source class)
+        desc : str
+            transaction description
+        amount : float
+            expense amount (< 0) or income amount (> 0)
+        fee : float
+            fee amount
+        note : str
+            a note, if wanted
+        category : str, optional, default=None
+            category for the extended transaction. If omitted, it will have the 
+            same as the original transaction; if '', it will be empty
+        tags : list, optional, default=None
+            list with tags for the extended to the transaction. If omitted, it 
+            will have the same as the original transaction; if [], it will be 
+            empty
+
+        Returns
+        -------
+        StdReturn object with the return values.
+        '''
+
+        r = StdReturn(message="Transaction successfully updated")
 
         df = pd.DataFrame(columns=Config.headers())
 
-        # Time
-        df['time'] = pd.to_datetime(time).dt.tz_localize(timezone).dt.tz_convert(
-            self._cfg.local_timezone).dt.tz_localize(None)
+        src = None
+        for s in self._sources.sources:
+            if s.name.lower() == source.lower():
+                src = s
 
+        if src is None:
+            r.success = False
+            r.message = 'There is no "source" named {}.'.format(source)
+            return r
+
+        df.loc[0, 'id'] = int(self._df['id'].max() + 1)
+        df['time'] = pd.to_datetime([time]).tz_localize(timezone).tz_convert(
+            self._cfg.local_timezone).tz_localize(None)
         df['input'] = 'manual'
         df['type'] = type
-        df['source'] = source.name
-        df['source_id'] = source.id
+        df['source'] = src.name
+        df['source_id'] = src.id
         df['desc'] = desc
         df['amount'] = amount
         df['fee'] = fee
         df['total'] = amount + fee
-        df['curr'] = source.currency
-        df['note'] = note
-        df['category'] = category
-        df['tags'] = tags
+        df['curr'] = src.currency
 
-        pd.concat([self._df, df], ignore_index=True)
+        if note is not None:
+            df['note'] = note
+
+        if category is not None:
+            df['category'] = category
+
+        if tags is not None:
+            df['tags'] = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
+
+        self._df = pd.concat([self._df, df], ignore_index=True)
         self._sort()
+
+        return r
 
     def add_bulk(self, new_dfs: list) -> None:
 
@@ -660,7 +713,8 @@ class Transactions:
             else:
                 r.success = False
                 r.message = 'Backend error with the transaction index.'
-                r.details = 'The method expects index as an int > 0 or list(int), it received a {}'.format(type(i))
+                r.details = 'The method expects index as an int > 0 or list(int), it received a {}'.format(
+                    type(i))
                 return r
 
         elif search_result is not None:
