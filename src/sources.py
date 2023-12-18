@@ -87,7 +87,7 @@ class Source:
 
     def statement_parse(self, stmt_path: str) -> pandas.DataFrame:
         parser = StatementsParser(
-            stmt_path, self._stmt_timezone, Config.headers())
+            stmt_path, self._stmt_timezone)
 
         # Proceeds only if at least one column mapping has been set
         if len(self._stmt_columns_mapping) == 0:

@@ -162,12 +162,43 @@ class Transactions:
 
         return r
 
-    def add_bulk(self, new_dfs: list) -> None:
+    def add_bulk(self, new_dfs: list) -> StdReturn:
+        '''
+        Merges the existing transactions with the new one(s).
 
-        for new_df in new_dfs:
-            self._df = new_df if self._df.empty else pd.concat(
-                [self._df, new_df], ignore_index=True)
-        self._sort()
+        This method adds the unique transaction identifiers and sorts the
+        resulting list by date.
+
+
+        Parameters
+        ----------
+        new_dfs : list
+            list of Pandas Dataframes to be merged with the existing transactions
+            list.
+
+        Returns
+        -------
+        StdReturn object with the return values.
+        '''
+
+        r = StdReturn(message='Transaction DataFrames successfully combined.')
+
+        try:
+            for new_df in new_dfs:
+                self._df = new_df if self._df.empty else pd.concat(
+                    [self._df, new_df], ignore_index=True)
+            self._sort()
+
+            for i in range(0, len(self._df)):
+                if pd.isna(self._df.loc[i, 'id']) or self._df.loc[i, 'id'] == 0:
+                    self._df.loc[i, 'id'] = self._df['id'].max() + 1
+        except Exception as e:
+            r.success = False
+            r.message = 'Issue when combining the existing transactions with the new one'
+            r.details = 'Method: Transactions.add_bulk; exception: {}'.format(
+                e)
+
+        return r
 
     def backup(self) -> None:
         '''

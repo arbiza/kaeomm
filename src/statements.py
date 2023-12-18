@@ -93,3 +93,5 @@ class StatementsParser:
         cfg = Config()
         self._df['time'] = self._df['time'].dt.tz_localize(
             self._timezone).dt.tz_convert(cfg.local_timezone).dt.tz_localize(None)
+
+        self._df['input'] = 'stmt'
