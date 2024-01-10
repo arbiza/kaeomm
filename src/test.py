@@ -1,28 +1,13 @@
+# import json
 
-categories = [
-    "Investments",
-    "Savings",
-    "Clothes",
-    "Eating/drinking out",
-    "Food delivery",
-    "Donations",
-    "Fees",
-    "Taxes",
-    "Pension",
-    "Salary",
-    "Reimbursement",
-    "Gifts",
-    "Groceries",
-    "Health",
-    "Insurance",
-    "Travel",
-    "Transport",
-    "Long-lasting",
-    "Hobbies",
-    "Services",
-    "Home"
-]
+# temp = {"apportioned": [53]}
 
-print(categories)
-categories.sort()
-print(categories)
+# print(type(temp), temp)
+
+# temp2 = json.dumps(temp)
+
+# print(type(temp2), temp2)
+
+la = []
+la[0] = [1,1]
+la[1] = 

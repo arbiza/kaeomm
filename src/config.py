@@ -38,8 +38,6 @@ class Config:
             'cash withdraw',  # cash withdraws are not expenses
             'currency exchange',
             'self transfer',  # moving from between sources are not accounted
-            'spread',
-            'extend'
         ]
 
     @property
@@ -102,7 +100,7 @@ class Config:
         '''Returns the transactions DataFrame headers list'''
         return ['id',
                 'time',
-                'input',  # manual | import
+                'input',
                 'type',
                 'source',
                 'source_id',
@@ -113,6 +111,8 @@ class Config:
                 'curr',
                 'note',
                 'system',
+                'allot',
+                'link',
                 'category',
                 'tags'
                 ]

@@ -1,6 +1,6 @@
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
 import re
+import json
 
 from config import Config
 from sources import Sources, Source
@@ -63,6 +63,8 @@ class Transactions:
             print(str(e))
 
         self._df['time'] = pd.to_datetime(self._df['time'])
+        self._df['allot'] = self._df['allot'].astype('Int64')
+        self._df['link'] = self._df['link'].astype('Int64')
 
         # Check all the categories in the dataframe and update the categories
         # list.
@@ -200,14 +202,25 @@ class Transactions:
 
         return r
 
-    def backup(self) -> None:
+    def backup(self) -> StdReturn:
         '''
         Saves the current transactions database to a file named with a timestamp
         '''
-        self._df.to_csv(self._cfg.db_dir + 'transactions_' +
-                        datetime_for_filename() + '.csv',
-                        sep='|',
-                        index=False)
+
+        filename = self._cfg.db_dir + 'transactions_' + datetime_for_filename() + \
+            '.csv'
+
+        r = StdReturn(message='Backup successful')
+        r.details = filename
+
+        try:
+            self._df.to_csv(filename, sep='|', index=False)
+        except Exception as e:
+            r.success = False
+            r.message = 'Transactions backup failed.'
+            r.details = 'Method: Transactions.backup; exception: {}'.format(e)
+
+        return r
 
     def df_info(self) -> str:
 
@@ -219,90 +232,59 @@ class Transactions:
             f"{self._df.describe()}"
         )
 
-    def extend(self, i, source, amount, fee, note, category=None, tags=None):
+    def link(self, list_i: list) -> StdReturn:
         '''
-        Adds an additional transaction with some of the values from the original
-        one (at index 'i'). More entries will represent one transaction and the
-        sum of them will represent the real amount expend or received.
-
-        It's useful, for example, to register a tip at a restaurant; this 
-        transaction will have the same date/time and description, but may have 
-        all other values different.
+        It associates different transactions which provides a thorough view of 
+        the amount spent and all the transactions involved in a process. It's 
+        useful, for example, to associate transactions such as the tip with the 
+        payment for the meal, long multi-step bureaucratic processes, or 
+        different transactions that comprise one payment or income.
 
         Other examples:
           - salary discounts
-          - partial refunds with different sources
-          - 
+          - refunds with different sources or transfers
+          - rent + utilities monthly payment
 
 
         Parameters
         ----------
-        i : int
-            index of the transaction to be extended
-        source : str
-            source name (from the Source class)
-        amount : float
-            expense amount (< 0) or income amount (> 0)
-        fee : float
-            fee amount
-        note : str
-            a note, if wanted
-        category : str, optional, default=None
-            category for the extended transaction. If omitted, it will have the 
-            same as the original transaction; if '', it will be empty
-        tags : list, optional, default=None
-            list with tags for the extended to the transaction. If omitted, it 
-            will have the same as the original transaction; if [], it will be 
-            empty
+        list_i : list
+            index list of two or more transactions to be linked.
 
         Returns
         -------
-        None
+        StdReturn object with the return values.
         '''
 
-        ext_source = None
+        r = StdReturn()
 
-        for s in self._sources.sources:
-            if source.lower() == s.name.lower():
-                ext_source = s
+        if len(list_i) < 2:
+            r.success = False
+            r.message = 'Linking requires two or more transactions.'
+            r.details = 'Received {} transaction'.format(len(list_i))
+            return r
 
-        if ext_source is None:
-            raise TransactionsException(
-                'There is no source named "{}".\n'.format(source),
-                'Please, register this source first.')
+        df = self.search(list_i).dropna(
+            subset=['link']).drop_duplicates(subset=['link'])
 
-        category = self._df.loc[i]['category'] if category is None else self._cfg.add_new_category(
-            category)
+        if len(df) > 1:
+            r.success = False
+            r.message = 'Transactions not linked - they already have different links.'
+            r.details = '\n' + df[['id', 'link']].to_string()
+            return r
 
-        if tags is None:
-            tags = self._df.loc[i]['tags']
-        elif isinstance(tags, list):
-            tags = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
+        if len(df) == 1:
+            id = int(df.iloc[0]['link'])
         else:
-            raise TransactionsException(
-                'Tags has to be a list or omitted (None)\n',
-                'The object receives is of type "{}"'.format(tags))
+            id = int(self._df.loc[list_i[0], 'id'])
 
-        self.add_bulk(
-            [pd.DataFrame(
-                [[
-                    self._df.loc[i]['time'],
-                    'extend',
-                    ext_source.name,
-                    ext_source.id,
-                    self._df.loc[i]['desc'],
-                    float(amount),
-                    float(fee),
-                    float(amount + fee),
-                    ext_source.currency,
-                    note,
-                    '',
-                    category,
-                    tags
-                ]],
-                columns=Config.headers()
-            )
-            ])
+        # Link transactions
+        for i in list_i:
+            self._df.loc[i, 'link'] = int(id)
+
+        r.message = 'Transactions successfully linked'
+        r.details = '\n' + self.search(list_i)[['id', 'link']].to_string()
+        return r
 
     def print_to_cli(self, columns: list = [], n_rows: int = 10) -> None:
         '''
@@ -324,8 +306,20 @@ class Transactions:
         self._df = pd.DataFrame(columns=Config.headers())
 
     def save(self) -> None:
-        self._df.to_csv(self._cfg.db_dir + 'transactions.csv',
-                        sep='|', index=False)
+
+        filename = self._cfg.db_dir + 'transactions_.csv'
+
+        r = StdReturn(message='Transactions database successfully saved')
+        r.details = filename
+
+        try:
+            self._df.to_csv(filename, sep='|', index=False)
+        except Exception as e:
+            r.success = False
+            r.message = 'Transactions backup failed.'
+            r.details = 'Method: Transactions.backup; exception: {}'.format(e)
+
+        return r
 
     def search(self,
                index: int or list(int) = None,

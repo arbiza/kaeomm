@@ -1,13 +1,13 @@
 import pandas as pd
+from datetime import datetime
+import json
+
 from transactions import Transactions
 from statements import StatementsParser
 from config import Config
 from sources import Source
 from sources import Sources
-
-from datetime import datetime
-import pytz
-import tzlocal
+from utils import StdReturn
 
 
 def reset(t: Transactions, sources: Sources) -> None:
@@ -141,15 +141,17 @@ if __name__ == "__main__":
     #     overwrite_tags=True
     # )
 
+    # t.print_to_cli([], 100)
+
     # with pd.option_context('display.min_rows', 100, 'display.max_rows', 100):
     #     print(
     #         t.search(
     #             # index=[1571],
     #             # start_date='2023-07-13',
     #             # end_date='2023-07-15',
-    #             # type='TRADE',
+    #             # type='test',
     #             # source='',
-    #             description='jatagan',
+    #             # description='benefici',
     #             # total=,
     #             # currency='',
     #             # note='',
@@ -159,9 +161,19 @@ if __name__ == "__main__":
     #         )
     #     )
 
-    # t.add('2023-11-10', 'Europe/Warsaw', 'CARD', 'Pluxee - physical card', )
+    t.print_to_cli([], 40)
 
-    t.print_to_cli([], 100)
+    print(t.link([1, 2, 3]))
+
+    t.print_to_cli([], 40)
+
+    print(t.df_info())
+
+    # t.print_to_cli([], 10)
+
+    # temp2 = json.loads(t._df.loc[1, 'system'])
+
+    # print(type(temp2), temp2)
 
     # t.save()
     # s.save()

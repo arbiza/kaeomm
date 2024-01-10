@@ -28,6 +28,12 @@ class StdReturn:
         else:
             raise UtilsException('"success" accepts only "True" or "False"')
 
+    def __str__(self) -> str:
+        return (
+            "Success: {}\n"
+            "Message: {}\n"
+            "Details: {}").format(self.success, self.message, self.details)
+
 
 def datetime_for_filename() -> str:
     return datetime.now().strftime(('%Y-%m-%d_%H-%M-%S'))

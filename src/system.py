@@ -11,7 +11,7 @@ from config import Config
 def db_columns_update():
     '''
     1. Update 'headers' list below  with the headers expected in the new version
-    2. Update the data source in "Config('../data/db')"
+    2. Update the data source in "Config('../data/db')", if not the default
     3. Run this file calling this function in main
     4. Update the headers list in the Trasnaction class with the same headers
        used here
@@ -34,6 +34,8 @@ def db_columns_update():
                'curr',
                'note',
                'system',
+               'allot',
+               'link',
                'category',
                'tags'
                ]
@@ -81,6 +83,6 @@ def set_id():
 
 
 if __name__ == "__main__":
-    # db_columns_update()
+    db_columns_update()
     # migrate_colum('system_cat', 'system')
-    set_id()
+    # set_id()
