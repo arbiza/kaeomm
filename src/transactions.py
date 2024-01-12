@@ -338,6 +338,7 @@ class Transactions:
         t['curr'] = self._df.loc[i]['curr'],
         t['note'] = note,
         t['allot'] = self._df.loc[i, 'id'],
+        t['link'] = self._df.loc[i, 'link']
         t['category'] = category,
         t['tags'] = tags
 
@@ -430,6 +431,12 @@ class Transactions:
         # Link transactions
         for i in list_i:
             self._df.loc[i, 'link'] = int(id)
+
+            # If the transaction at 'i' is alloted, it will link all alloted
+            # transactions.
+            if not pd.isna(self._df.loc[i, 'allot']):
+                self._df.loc[self._df['allot'] ==
+                             self._df.loc[i, 'allot'], 'link'] = int(id)
 
         r.message = 'Transactions successfully linked'
         r.details = '\n' + self.search(list_i)[['id', 'link']].to_string()
