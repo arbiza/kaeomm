@@ -202,6 +202,155 @@ class Transactions:
 
         return r
 
+    def allot(self, i: int, amount: float, fee: float, note: str = None,
+              category: str = None, tags: list = None) -> StdReturn:
+        '''
+        Splits a transaction into smaller transactions, so that some amount can 
+        be apportioned into different categories and tags. The total amount of 
+        the original transaction will be shared among all the allotted 
+        transactions. Everytime the function runs, a new transaction will be 
+        added that splits the original one.
+
+        It's useful, for example, to decompose a supermarket transaction into 
+        different categories (food, alcohol, cleaning), or to separate the 
+        amount and the fee with different categories or tags.
+
+        When apportioning a transaction, the system will use the 'allot' column 
+        to link all the allotments to the original transaction id. 
+
+
+        Parameters
+        ----------
+        i : int
+            index of the transaction to be split
+        amount : float
+            expense amount - it has to be smaller or equal to original amount
+        fee : float
+            fee amount - it has to be smaller or equal to original amount
+        note : str
+            a note, if wanted
+        category : str, optional, default=None
+            category for the extended transaction. If omitted, it will have the 
+            same as the original transaction; if '', it will be empty
+        tags : list, optional, default=None
+            list with tags for the extended to the transaction. If omitted, it 
+            will have the same as the original transaction; if [], it will be 
+            empty
+
+        Returns
+        -------
+        StdReturn
+        '''
+
+        r = StdReturn(message='Allot successfull')
+
+        # There are several restrictions for this operation. Since it decompose
+        # a transaction, the amounts have to mean fit into the combined amount
+        # and can't be both zero.
+        if amount == 0 and fee == 0:
+            r.success = False
+            r.message = 'Both "amount" and "fee" can\'t be 0.'
+            r.details = f'amount: {amount}; fee {fee}'
+            return r
+
+        # If it's an expense
+        if amount != 0 and self._df.loc[i]['total'] < 0:
+
+            if amount > 0:
+                amount *= -1
+            if fee > 0:
+                fee *= -1
+
+            # Amount + fee can't exceed the total
+            if (amount + fee) < self._df.loc[i]['total']:
+                r.success = False
+                r.message = '"amount" and "fee" combined cannot exceed the total amount of the original transaction'
+                r.details = f'amount: {amount}; fee {fee} -- original\'s total: {self._df.loc[i]["total"]}'
+                return r
+
+            # Amount and fee have to be smaller than the original values
+            if amount < self._df.loc[i]['amount'] or fee < self._df.loc[i]['fee']:
+                r.success = False
+                r.message = '"amount" and "fee" have to be smaller than in the original transaction'
+                r.details = f'Received: amount: {amount}; fee {fee} -- Original: amount: {self._df.loc[i]["amount"]}; fee: {self._df.loc[i]["fee"]}'
+                return r
+
+        # If it's an income
+        elif fee != 0 and self._df.loc[i]['total'] > 0:
+            if amount < 0:
+                amount *= -1
+            if fee < 0:
+                fee *= -1
+
+            # Amount + fee can't exceed the total
+            if (amount + fee) > self._df.loc[i]['total']:
+                r.success = False
+                r.message = '"amount" and "fee" combined cannot exceed the total amount of the original transaction'
+                r.details = f'Received: {amount} + fee {fee} = {amount+fee} -- Original\'s total: {self._df.loc[i]["total"]}'
+                return r
+
+            # Amount and fee have to be smaller than the original values
+            if amount > self._df.loc[i]['amount'] or fee > self._df.loc[i]['fee']:
+                r.success = False
+                r.message = '"amount" and "fee" have to be smaller than in the original transaction'
+                r.details = f'Received: amount: {amount}; fee {fee} -- Original: amount: {self._df.loc[i]["amount"]}; fee: {self._df.loc[i]["fee"]}'
+                return r
+
+        # If the transaction at 'i' is part of an alloting, but it' not the main
+        # one -- alloted transactions have the main transaction's id in the
+        # 'allot' column; the main one has its own id.
+        if not pd.isna(self._df.loc[i]['allot']) and self._df.loc[i]['allot'] != self._df.loc[i]['id']:
+            r.success = False
+            r.message = 'The selected transaction is part of an alloting, but it\'s not the original one.'
+            r.details = f'The original transaction\' id is {self._df.loc[i]["allot"]}'
+            return r
+
+        category = self._df.loc[i]['category'] if category is None else self._cfg.add_new_category(
+            category)
+
+        if tags is None:
+            tags = self._df.loc[i]['tags']
+        elif isinstance(tags, list):
+            tags = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
+        else:
+            r.success = False
+            r.message = '"tags" parameter has to be a list or omitted (None)'
+            r.details = f'The object receives is of type "{tags}"'
+            return r
+
+        # Update the original transaction
+        self._df.loc[i, 'amount'] = self._df.loc[i]['amount'] - float(amount)
+        self._df.loc[i, 'fee'] = self._df.loc[i]['fee'] - fee
+        self._df.loc[i, 'total'] = self._df.loc[i]['amount'] + \
+            self._df.loc[i]['fee']
+        self._df.loc[i, 'allot'] = self._df.loc[i, 'id']
+
+        t = pd.DataFrame(columns=Config.headers())
+        t['time'] = self._df.loc[i]['time'],
+        t['input'] = 'manual',
+        t['type'] = self._df.loc[i]['type'],
+        t['source'] = self._df.loc[i]['source'],
+        t['source_id'] = self._df.loc[i]['source_id'],
+        t['desc'] = self._df.loc[i]['desc'],
+        t['amount'] = float(amount),
+        t['fee'] = float(fee),
+        t['total'] = float(amount + fee),
+        t['curr'] = self._df.loc[i]['curr'],
+        t['note'] = note,
+        t['allot'] = self._df.loc[i, 'id'],
+        t['category'] = category,
+        t['tags'] = tags
+
+        # Add the new transaction
+        add_return = self.add_bulk([t])
+
+        if not add_return.success:
+            r.success = False
+            r.message = 'Failed to add the new transaction to the existing database.'
+            r.details = add_return.details
+
+        return r
+
     def backup(self) -> StdReturn:
         '''
         Saves the current transactions database to a file named with a timestamp
@@ -568,136 +717,6 @@ class Transactions:
     def _sort(self) -> None:
         self._df.sort_values(by=['time'], inplace=True)
         self._df.reset_index(inplace=True, drop=True)
-
-    def spread(self, i: int, amount: float, fee: float, note: str = None,
-               category: str = None, tags: list = None) -> None:
-        '''
-        Adds an additional transaction with some of the values from the original
-        one (at index 'i'). More entries will represent one transaction, but 
-        total amount will be split among them.
-
-        It's useful, for example, to decompose a supermarket transaction into 
-        different categories (food, alcohol, cleaning), or to separate the 
-        amount and the fee with different categories or tags.
-
-        The new transaction's 'system' column will reference the ID of the
-        original transaction.
-
-
-        Parameters
-        ----------
-        i : int
-            index of the transaction to be extended
-        amount : float
-            expense amount - it has to be smaller or equal to original amount
-        fee : float
-            fee amount - it has to be smaller or equal to original amount
-        note : str
-            a note, if wanted
-        category : str, optional, default=None
-            category for the extended transaction. If omitted, it will have the 
-            same as the original transaction; if '', it will be empty
-        tags : list, optional, default=None
-            list with tags for the extended to the transaction. If omitted, it 
-            will have the same as the original transaction; if [], it will be 
-            empty
-
-        Returns
-        -------
-        None
-        '''
-
-        # There are several restrictions for this operation. Since it decompose
-        # a transaction, the amounts have to mean fit into the combined amount
-        # and can't be both zero.
-        if amount == 0 and fee == 0:
-            raise TransactionsException(
-                '"amount" and "fee" can\'t both be zero')
-
-        # If it's an expense
-        if amount != 0 and self._df.loc[i]['total'] < 0:
-
-            if amount > 0:
-                amount *= -1
-            if fee > 0:
-                fee *= -1
-
-            # Amount + fee can't exceed the total
-            if (amount + fee) < self._df.loc[i]['total']:
-                raise TransactionsException(
-                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
-                        self._df.loc[i]['total'])
-                )
-
-            # Amount and fee have to be smaller than the original values
-            if amount < self._df.loc[i]['amount'] or fee < self._df.loc[i]['fee']:
-                raise TransactionsException(
-                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
-                        self._df.loc[i]['amount'], self._df.loc[i]['fee'])
-                )
-
-        # If it's an income
-        elif fee != 0 and self._df.loc[i]['total'] > 0:
-            if amount < 0:
-                amount *= -1
-            if fee < 0:
-                fee *= -1
-
-            # Amount + fee can't exceed the total
-            if (amount + fee) > self._df.loc[i]['total']:
-                raise TransactionsException(
-                    '"amount" and "fee" combined cannot exceed the total amount of the original transaction ({})'.format(
-                        self._df.loc[i]['total'])
-                )
-
-            # Amount and fee have to be smaller than the original values
-            if amount > self._df.loc[i]['amount'] or fee > self._df.loc[i]['fee']:
-                raise TransactionsException(
-                    '"amount" and "fee" have to be smaller than the original value ({} and {})'.format(
-                        self._df.loc[i]['amount'], self._df.loc[i]['fee']))
-
-        category = self._df.loc[i]['category'] if category is None else self._cfg.add_new_category(
-            category)
-
-        if tags is None:
-            tags = self._df.loc[i]['tags']
-        elif isinstance(tags, list):
-            tags = ','.join([self._cfg.add_new_tag(tag) for tag in tags])
-        else:
-            raise TransactionsException(
-                'Tags has to be a list or omitted (None)\n',
-                'The object receives is of type "{}"'.format(tags))
-
-        # Update the original transaction
-        self._df.loc[i, 'amount'] = self._df.loc[i]['amount'] - float(amount)
-        self._df.loc[i, 'fee'] = self._df.loc[i]['fee'] - fee
-        self._df.loc[i, 'total'] = self._df.loc[i]['amount'] + \
-            self._df.loc[i]['fee']
-        self._df.loc[i, 'system'] = 'spread'
-
-        # Add the new transaction
-        self.add_bulk(
-            [pd.DataFrame(
-                [[
-                    self._df['id'].max() + 1,
-                    self._df.loc[i]['time'],
-                    'manual',
-                    self._df.loc[i]['type'],
-                    self._df.loc[i]['source'],
-                    self._df.loc[i]['source_id'],
-                    self._df.loc[i]['desc'],
-                    float(amount),
-                    float(fee),
-                    float(amount + fee),
-                    self._df.loc[i]['curr'],
-                    note,
-                    self._df.loc[i, 'id'],
-                    category,
-                    tags
-                ]],
-                columns=Config.headers()
-            )
-            ])
 
     def update(self, index: list = None,
                search_result: pd.DataFrame = None,
