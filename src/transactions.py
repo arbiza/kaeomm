@@ -372,6 +372,75 @@ class Transactions:
 
         return r
 
+    def delete(self, i_list: list) -> StdReturn:
+        '''
+        Deletes the transactions at the indexes passed as argument.
+
+        Before deleting the transactions, this method checks whether any of the 
+        transactions are part of an apportioning.
+
+        Deleting 'allot' transactions:
+         - if it's the original transaction: deletes all the transactions in 
+           that apportioning
+         - if it's not the origianl transaction: deletes that transaction only
+           and reverts the amount and fee to the original one.
+
+        Parameters
+        ----------
+        list_i : list
+            index list of two or more transactions to be linked.
+
+        Returns
+        -------
+        StdReturn object with the return values.
+        '''
+        r = StdReturn(message='Delete successful')
+
+        additional_indexes = []
+
+        for i in i_list:
+            try:
+                if not pd.isna(self._df.loc[i, 'allot']):
+                    # If it's the original transaction of the apportioning, all
+                    # the transactions in that 'allot' will be deleted
+                    if self._df.loc[i, 'allot'] == self._df.loc[i, 'id']:
+                        additional_indexes += list(self.search(
+                            allot=self._df.loc[i, 'allot']).index)
+
+                    # It it's not the original transaction of the apportioning, only
+                    # this transaction will be deleted and the amounts reverted to
+                    # the origianl one
+                    else:
+                        main_i = list(self.search(
+                            id=self._df.loc[i, 'allot']).index.values)
+
+                        # It has to confirm there is a transaction with that ID.
+                        # There must be, but in case there was some issue it's a
+                        # workaround
+                        if len(main_i) > 0:
+                            self.update(index=main_i, amount=self._df.loc[i, 'amount'] + self._df.loc[main_i,
+                                        'amount'], fee=self._df.loc[i, 'fee'] + self._df.loc[main_i, 'fee'])
+            except Exception as e:
+                r.success = False
+                r.message = 'Failed to delete transaction'
+                r.details = 'Transaction.delete; exception: {}'.format(e)
+                return r
+
+        i_list += additional_indexes
+        i_list = list(set(i_list))
+
+        try:
+            self._df = self._df.drop(index=i_list)
+        except Exception as e:
+            r.success = False
+            r.message = 'Failed to delete transaction'
+            r.details = 'Transaction.delete; exception: {}'.format(e)
+            return r
+
+        r.details = 'Deleted {} transaction(s); indexes were {}'.format(
+            len(i_list), i_list)
+        return r
+
     def df_info(self) -> str:
 
         return (
@@ -479,6 +548,7 @@ class Transactions:
 
     def search(self,
                index: int | list = None,
+               id: int = None,
                start_date: str = None,
                end_date: str = None,
                type: str = None,
@@ -503,6 +573,8 @@ class Transactions:
             when "int": returns the row at the specified index
             when "list": returns the rows at the indexes in the list
             for a specific range, use index=list(range(<start>, <end+1>))
+        id : int
+            returns the transaction it the 'id' informed
         start_date: str
             date in the format "yyyy-mm-dd"
         end_date: str
@@ -565,6 +637,10 @@ class Transactions:
             else:
                 raise TransactionsException(
                     '"index" has to be an integer or a list of integers; received "{}"'.format(index))
+
+        # INDEX
+        if id is not None:
+            s_df = s_df[(s_df['id'] == id)]
 
         # DATE
         pattern = '^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
@@ -794,7 +870,7 @@ class Transactions:
                 r.success = False
                 r.message = 'Backend error with the transaction index.'
                 r.details = 'The method expects index as an int > 0 or list(int), it received a {}'.format(
-                    type(i))
+                    type(index))
                 return r
 
         elif search_result is not None:
