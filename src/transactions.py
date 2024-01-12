@@ -471,7 +471,7 @@ class Transactions:
         return r
 
     def search(self,
-               index: int or list(int) = None,
+               index: int | list = None,
                start_date: str = None,
                end_date: str = None,
                type: str = None,
@@ -481,10 +481,12 @@ class Transactions:
                currency: str = None,
                note: str = None,
                system: str = None,
-               categories: str or list(str) = None,
-               tags: str or list(str) or int = None) -> pd.DataFrame:
+               allot: int | str = None,
+               link: int | str = None,
+               categories: str | list = None,
+               tags: str | list | int = None) -> pd.DataFrame:
         '''
-        Searchs for transaction which combine all the arguments passed.
+        Searchs for transactions which combine all the arguments values.
 
         Set the arguments you want to look for. 
 
@@ -517,7 +519,16 @@ class Transactions:
             passed in "note". '*' returns any note
         system: str
             returns the transactions with the "system" specified.
+            '' returns the transactions with no values for the 'system' column
             '*' returns any category
+        allot: int | '' | *
+            returns the transactions conpraising the allot with the id informed.
+            '' returns not-alloted transactions
+            '*' returns all alloted transactions
+        link: int | '' | *
+            returns the transactions linked by the id informed.
+            '' returns not-linked transactions
+            '*' returns all linked transactions (any link)
         categories: str or list(str)
             when "str" with some value, return the transactions with the category
             when '': returns transactions without category
@@ -622,7 +633,7 @@ class Transactions:
                 note = str(note)
                 s_df = s_df.loc[s_df['note'].str.contains(note, case=False)]
 
-        # SYSTEM CATEGORY
+        # SYSTEM
         if system is not None:
             if system == '':
                 s_df = s_df[s_df['system'].isna()]
@@ -630,6 +641,24 @@ class Transactions:
                 s_df = s_df.dropna(subset=['system'])
             else:
                 s_df = s_df[(s_df['system'] == system)]
+
+        # ALLOT
+        if allot is not None:
+            if allot == '':
+                s_df = s_df[s_df['allot'].isna()]
+            elif allot == '*':
+                s_df = s_df.dropna(subset=['allot'])
+            else:
+                s_df = s_df[(s_df['allot'] == allot)]
+
+        # LINK
+        if link is not None:
+            if link == '':
+                s_df = s_df[s_df['link'].isna()]
+            elif link == '*':
+                s_df = s_df.dropna(subset=['link'])
+            else:
+                s_df = s_df[(s_df['link'] == link)]
 
         # CATEGORY
         if categories is not None:
