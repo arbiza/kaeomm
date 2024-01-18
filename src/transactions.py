@@ -441,6 +441,24 @@ class Transactions:
             len(i_list), i_list)
         return r
 
+    def _delete_duplicates(self) -> StdReturn:
+
+        r = StdReturn()
+
+        df = self._df.drop_duplicates(
+            subset=['time', 'source_id', 'total', 'curr'])
+
+        if self._df.equals(df):
+            r.message = 'No duplicates found to be removed'
+        else:
+            r.message = 'Duplicates removed'
+            r.details = 'Removed columns: \n{}'.format(
+                pd.concat([self._df, df]).drop_duplicates(keep=False))
+
+        self._df = df
+
+        return r
+
     def df_info(self) -> str:
 
         return (

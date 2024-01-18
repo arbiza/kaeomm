@@ -161,15 +161,34 @@ if __name__ == "__main__":
     #         )
     #     )
 
-    t.print_to_cli([], 40)
+    # t.link([13, 14, 3158])
 
-    print(t.link([1, 2, 3]))
+    # with pd.option_context('display.min_rows', 100, 'display.max_rows', 100):
+    #     print(t.search(link=14))
 
-    t.print_to_cli([], 40)
+    # t.allot(3158, 66, 0, 'this is a test', 'alcohol')
+    # t.allot(3158, 23.12, 0, 'this is a test', 'gifts')
 
-    print(t.df_info())
+    # with pd.option_context('display.min_rows', 100, 'display.max_rows', 100):
+    #     print(t.search(link=14))
 
-    # t.print_to_cli([], 10)
+    # print(t.delete([3159]))
+
+    # print('\nAFTER DELETION\n')
+
+    # with pd.option_context('display.min_rows', 100, 'display.max_rows', 100):
+    #     print(t.search(link=14))
+
+    # with pd.option_context('display.min_rows', 100, 'display.max_rows', 100):
+    #     print(t._df)
+
+    # print(t.search(start_date='2022-12-12'))
+    # print(t.search(start_date='2023-08-08'))
+
+    t.add_bulk([s.get_source('Revolut PLN').statement_parse(
+        '../data/statements/revolut-pln.csv')])
+
+    print(t._delete_duplicates())
 
     # temp2 = json.loads(t._df.loc[1, 'system'])
 
