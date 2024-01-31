@@ -442,20 +442,30 @@ class Transactions:
         return r
 
     def _delete_duplicates(self) -> StdReturn:
+        '''
+        Deletes duplicates.
+
+        The method excludes the 'id' column from the search and removes all 
+        duplicated transactions provided that the values of all columns are the
+        same.
+
+        Returns
+        -------
+        StdReturn object with the return values.
+        '''
 
         r = StdReturn()
 
-        df = self._df.drop_duplicates(
-            subset=['time', 'source_id', 'total', 'curr'])
+        duplicates = self._df.loc[self._df.drop(
+            ['id'], axis=1).duplicated(), :]
 
-        if self._df.equals(df):
+        if len(duplicates) == 0:
             r.message = 'No duplicates found to be removed'
         else:
+            self._df = self._df.loc[self._df.drop(
+                ['id'], axis=1).duplicated(), :]
             r.message = 'Duplicates removed'
-            r.details = 'Removed columns: \n{}'.format(
-                pd.concat([self._df, df]).drop_duplicates(keep=False))
-
-        self._df = df
+            r.details = 'Removed columns: \n{}'.format(duplicates)
 
         return r
 
