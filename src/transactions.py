@@ -462,8 +462,7 @@ class Transactions:
         if len(duplicates) == 0:
             r.message = 'No duplicates found to be removed'
         else:
-            self._df = self._df.loc[self._df.drop(
-                ['id'], axis=1).duplicated(), :]
+            self.delete(list(duplicates.index.values))
             r.message = 'Duplicates removed'
             r.details = 'Removed columns: \n{}'.format(duplicates)
 
@@ -478,6 +477,37 @@ class Transactions:
             "\n\n\nDESCRIBE\n"
             f"{self._df.describe()}"
         )
+
+    def duplicates_check(self) -> pd.DataFrame:
+        '''
+        Provides a DF containing the transactions that are possibly duplicated
+
+        Depending on how a transaction was added, it may have different values 
+        for some columns. This method will select duplicates based on a very few
+        columns that happened on the same day (regardless the time). 
+
+        Returns
+        -------
+        pd.DataFrame with the possible duplicated transactions
+        '''
+
+        # Get the duplicates based on a very few columns
+        possible_duplicates = self._df.loc[self._df.duplicated(
+            subset=['source_id', 'total', 'curr'], keep=False), :]
+
+        # Converts the datetime into date -- Why?
+        #  - Imported transactions may have a precise time while manually added
+        #    may have the date only
+        #  - It eliminates timezone differences (mostly)
+        possible_duplicates.loc[:, 'time'] = possible_duplicates.loc[:, 'time'].apply(
+            lambda x: x.date())
+
+        # Gets the index os the possible duplicates, but this time uses the time
+        # column to filter also based on the date.
+        indexes = list(possible_duplicates.loc[possible_duplicates.duplicated(
+            subset=['time', 'source_id', 'total', 'curr'], keep=False), :].index.values)
+
+        return self.search(index=indexes)
 
     def link(self, list_i: list) -> StdReturn:
         '''
