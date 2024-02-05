@@ -441,7 +441,7 @@ class Transactions:
             len(i_list), i_list)
         return r
 
-    def _delete_duplicates(self) -> StdReturn:
+    def duplicates_delete(self) -> StdReturn:
         '''
         Deletes duplicates.
 
@@ -478,7 +478,32 @@ class Transactions:
             f"{self._df.describe()}"
         )
 
-    def duplicates_check(self) -> pd.DataFrame:
+    def duplicated_mark_as_not(self, list_i: list) -> StdReturn:
+        '''
+        Updates the 'system' column to mark a transaction as not duplicated
+
+        When marked, the transaction may can be excluded from later checks or
+        help the user when checking for duplicated transactions.
+
+        Parameters
+        ----------
+        list_i : list
+            index list of transaction indexes.
+
+        Returns
+        -------
+        StdReturn object with the return values.
+        '''
+
+        try:
+            self._df.loc[list_i, 'system'] = self._df.loc[list_i, 'system'].apply(
+                lambda x: '!dup' if pd.isna(x) or x == '' or x == '!dup' else f'{x},!dup')
+        except Exception as e:
+            return StdReturn(False, 'Failed to mark as not duplicated', f'Transactions.mark_as_not_duplicated - excpetion: {e}')
+
+        return StdReturn(message='Transactions marked as not duplicated', details=self.search(index=list_i))
+
+    def duplicates_search(self, exclude_marked: bool = False) -> pd.DataFrame:
         '''
         Provides a DF containing the transactions that are possibly duplicated
 
@@ -486,14 +511,29 @@ class Transactions:
         for some columns. This method will select duplicates based on a very few
         columns that happened on the same day (regardless the time). 
 
+        Parameters
+        ----------
+        exclude_marked : bool, optional, default=False
+            When true, it will exclude from the results all transactions which
+            have been marked as not duplicated by 'duplicated_mark_as_not' 
+            method. Attention: In cases when a transaction has been marked as
+            not duplicated, but later a duplicated transaction was added, this 
+            option may exclude real duplicated transations from the result.
+
         Returns
         -------
         pd.DataFrame with the possible duplicated transactions
         '''
 
         # Get the duplicates based on a very few columns
-        possible_duplicates = self._df.loc[self._df.duplicated(
-            subset=['source_id', 'total', 'curr'], keep=False), :]
+        if exclude_marked:
+            # It removes all the transactions where the 'system' column contains
+            # '!dup'
+            possible_duplicates = self._df.drop(self._df[~pd.isna(self._df['system']) &
+                                                         self._df['system'].str.contains('!dup')].index)
+        else:
+            possible_duplicates = self._df.loc[self._df.duplicated(
+                subset=['source_id', 'total', 'curr'], keep=False), :]
 
         # Converts the datetime into date -- Why?
         #  - Imported transactions may have a precise time while manually added
