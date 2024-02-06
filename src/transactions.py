@@ -630,7 +630,7 @@ class Transactions:
 
     def save(self) -> None:
 
-        filename = self._cfg.db_dir + 'transactions_.csv'
+        filename = self._cfg.db_dir + 'transactions.csv'
 
         r = StdReturn(message='Transactions database successfully saved')
         r.details = filename
